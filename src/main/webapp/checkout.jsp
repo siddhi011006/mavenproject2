@@ -326,29 +326,58 @@
 
         // Live calculation metrics
         let subtotal = <%= subtotal %>;
-        let appliedCoupon = "";
+        let appliedCoupon = {
+            code: "",
+            valid: false,
+            discountType: null,
+            discountAmount: 0.0
+        };
 
         function applyCoupon() {
             const code = document.getElementById('couponInput').value.trim().toUpperCase();
             const msg = document.getElementById('couponMessage');
-            const row = document.getElementById('couponRow');
-            const discVal = document.getElementById('discountVal');
             
-            if (code === "GLOW15") {
-                appliedCoupon = "GLOW15";
-                document.getElementById('hiddenCouponCode').value = "GLOW15";
-                msg.style.color = "var(--success)";
-                msg.innerText = "Coupon GLOW15 applied! 15% discount matches.";
-                recalculateTotals();
-            } else if (code === "") {
-                appliedCoupon = "";
+            if (code === "") {
+                appliedCoupon = { code: "", valid: false, discountType: null, discountAmount: 0.0 };
                 document.getElementById('hiddenCouponCode').value = "";
                 msg.innerText = "";
                 recalculateTotals();
-            } else {
-                msg.style.color = "var(--danger)";
-                msg.innerText = "Invalid coupon code.";
+                return;
             }
+
+            fetch(`CheckoutServlet?couponCode=${encodeURIComponent(code)}&subtotal=${subtotal}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.valid) {
+                        appliedCoupon = {
+                            code: code,
+                            valid: true,
+                            discountType: data.discountType,
+                            discountAmount: data.discountAmount
+                        };
+                        document.getElementById('hiddenCouponCode').value = code;
+                        msg.style.color = "var(--success)";
+                        
+                        let label = "";
+                        if (data.discountType === "PERCENTAGE") {
+                            label = `${data.discountAmount}%`;
+                        } else {
+                            label = formatCurrency(data.discountAmount);
+                        }
+                        msg.innerText = `Coupon ${code} applied! (${label} discount)`;
+                    } else {
+                        appliedCoupon = { code: "", valid: false, discountType: null, discountAmount: 0.0 };
+                        document.getElementById('hiddenCouponCode').value = "";
+                        msg.style.color = "var(--danger)";
+                        msg.innerText = data.errorMsg || "Invalid coupon code.";
+                    }
+                    recalculateTotals();
+                })
+                .catch(err => {
+                    console.error("Error validating coupon:", err);
+                    msg.style.color = "var(--danger)";
+                    msg.innerText = "Error validating coupon. Please try again.";
+                });
         }
 
         function recalculateTotals() {
@@ -361,8 +390,22 @@
             const btnTotalTextEl = document.getElementById('btnTotalText');
 
             let discount = 0.0;
-            if (appliedCoupon === "GLOW15") {
-                discount = subtotal * 0.15;
+            if (appliedCoupon.valid) {
+                if (appliedCoupon.discountType === "PERCENTAGE") {
+                    discount = subtotal * (appliedCoupon.discountAmount / 100.0);
+                } else if (appliedCoupon.discountType === "FIXED") {
+                    discount = appliedCoupon.discountAmount;
+                }
+                
+                const couponRowLabel = row.querySelector('span:first-child');
+                if (couponRowLabel) {
+                    if (appliedCoupon.discountType === "PERCENTAGE") {
+                        couponRowLabel.innerText = `Coupon Discount (${appliedCoupon.discountAmount}%)`;
+                    } else {
+                        couponRowLabel.innerText = `Coupon Discount`;
+                    }
+                }
+                
                 row.style.display = 'flex';
                 discVal.innerText = "-" + formatCurrency(discount);
             } else {
@@ -370,6 +413,7 @@
             }
 
             let discountedSubtotal = subtotal - discount;
+            if (discountedSubtotal < 0) discountedSubtotal = 0;
             let shipping = (discountedSubtotal >= 1500.0) ? 0.0 : 9.99;
             let tax = discountedSubtotal * 0.08;
             let total = discountedSubtotal + tax + shipping;

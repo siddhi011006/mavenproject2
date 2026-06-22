@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -31,7 +32,7 @@ public class AdminServlet extends HttpServlet {
         // Enforce admin privileges
         HttpSession session = request.getSession(false);
         if (session == null || !"ADMIN".equalsIgnoreCase((String) session.getAttribute("role"))) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied.");
+            response.sendRedirect(request.getContextPath() + "/");
             return;
         }
         doPost(request, response);
@@ -44,7 +45,7 @@ public class AdminServlet extends HttpServlet {
         // Enforce admin privileges
         HttpSession session = request.getSession(false);
         if (session == null || !"ADMIN".equalsIgnoreCase((String) session.getAttribute("role"))) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied.");
+            response.sendRedirect(request.getContextPath() + "/");
             return;
         }
 
@@ -76,6 +77,14 @@ public class AdminServlet extends HttpServlet {
                 String imageUrl = request.getParameter("imageUrl");
                 int stock = Integer.parseInt(request.getParameter("stock"));
                 int rating = Integer.parseInt(request.getParameter("rating"));
+                String brand = request.getParameter("brand");
+                if (brand == null || brand.trim().isEmpty()) brand = "LuxeGlow";
+                String sku = request.getParameter("sku");
+                String status = request.getParameter("status");
+                if (status == null || status.trim().isEmpty()) status = "ACTIVE";
+                String metaTitle = request.getParameter("meta_title");
+                String metaDescription = request.getParameter("meta_description");
+                String metaKeywords = request.getParameter("meta_keywords");
 
                 // Handle optional image file upload
                 Part filePart = request.getPart("imageFile");
@@ -91,7 +100,7 @@ public class AdminServlet extends HttpServlet {
                     imageUrl = "image/" + fileName;
                 }
 
-                String sql = "INSERT INTO products (name, description, price, category, image_url, stock, rating) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                String sql = "INSERT INTO products (name, description, price, category, image_url, stock, rating, brand, sku, status, meta_title, meta_description, meta_keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
                 ps.setString(1, name);
                 ps.setString(2, description);
@@ -100,6 +109,12 @@ public class AdminServlet extends HttpServlet {
                 ps.setString(5, imageUrl);
                 ps.setInt(6, stock);
                 ps.setInt(7, rating);
+                ps.setString(8, brand);
+                ps.setString(9, sku);
+                ps.setString(10, status);
+                ps.setString(11, metaTitle);
+                ps.setString(12, metaDescription);
+                ps.setString(13, metaKeywords);
                 ps.executeUpdate();
                 
                 // Add the primary image to product_images automatically
@@ -125,6 +140,14 @@ public class AdminServlet extends HttpServlet {
                 String imageUrl = request.getParameter("imageUrl");
                 int stock = Integer.parseInt(request.getParameter("stock"));
                 int rating = Integer.parseInt(request.getParameter("rating"));
+                String brand = request.getParameter("brand");
+                if (brand == null || brand.trim().isEmpty()) brand = "LuxeGlow";
+                String sku = request.getParameter("sku");
+                String status = request.getParameter("status");
+                if (status == null || status.trim().isEmpty()) status = "ACTIVE";
+                String metaTitle = request.getParameter("meta_title");
+                String metaDescription = request.getParameter("meta_description");
+                String metaKeywords = request.getParameter("meta_keywords");
 
                 // Handle optional image file upload
                 Part filePart = request.getPart("imageFile");
@@ -140,7 +163,7 @@ public class AdminServlet extends HttpServlet {
                     imageUrl = "image/" + fileName;
                 }
 
-                String sql = "UPDATE products SET name=?, description=?, price=?, category=?, image_url=?, stock=?, rating=? WHERE id=?";
+                String sql = "UPDATE products SET name=?, description=?, price=?, category=?, image_url=?, stock=?, rating=?, brand=?, sku=?, status=?, meta_title=?, meta_description=?, meta_keywords=? WHERE id=?";
                 PreparedStatement ps = con.prepareStatement(sql);
                 ps.setString(1, name);
                 ps.setString(2, description);
@@ -149,10 +172,21 @@ public class AdminServlet extends HttpServlet {
                 ps.setString(5, imageUrl);
                 ps.setInt(6, stock);
                 ps.setInt(7, rating);
-                ps.setInt(8, id);
+                ps.setString(8, brand);
+                ps.setString(9, sku);
+                ps.setString(10, status);
+                ps.setString(11, metaTitle);
+                ps.setString(12, metaDescription);
+                ps.setString(13, metaKeywords);
+                ps.setInt(14, id);
                 ps.executeUpdate();
                 
-                response.sendRedirect("admin?tab=products&success=Product updated successfully!");
+                String redirectTab = request.getParameter("redirectTab");
+                if ("product-details".equalsIgnoreCase(redirectTab)) {
+                    response.sendRedirect("admin?tab=product-details&id=" + id + "&success=Product updated successfully!");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Product updated successfully!");
+                }
 
             } else if ("delete".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
@@ -361,7 +395,12 @@ public class AdminServlet extends HttpServlet {
                     imgPs.close();
                 }
 
-                response.sendRedirect("admin?tab=products&success=Variant added successfully!");
+                String redirectTab = request.getParameter("redirectTab");
+                if ("product-details".equalsIgnoreCase(redirectTab)) {
+                    response.sendRedirect("admin?tab=product-details&id=" + productId + "&success=Variant added successfully!");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Variant added successfully!");
+                }
 
             } else if ("editVariant".equalsIgnoreCase(action)) {
                 int variantId = Integer.parseInt(request.getParameter("variantId"));
@@ -406,10 +445,24 @@ public class AdminServlet extends HttpServlet {
                     imgPs.close();
                 }
 
-                response.sendRedirect("admin?tab=products&success=Variant updated successfully!");
+                String redirectTab = request.getParameter("redirectTab");
+                if ("product-details".equalsIgnoreCase(redirectTab)) {
+                    response.sendRedirect("admin?tab=product-details&id=" + productId + "&success=Variant updated successfully!");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Variant updated successfully!");
+                }
 
             } else if ("deleteVariant".equalsIgnoreCase(action)) {
                 int variantId = Integer.parseInt(request.getParameter("variantId"));
+                int productId = 0;
+                try (PreparedStatement psGet = con.prepareStatement("SELECT product_id FROM product_variants WHERE id = ?")) {
+                    psGet.setInt(1, variantId);
+                    try (ResultSet rsGet = psGet.executeQuery()) {
+                        if (rsGet.next()) {
+                            productId = rsGet.getInt("product_id");
+                        }
+                    }
+                }
 
                 String sql = "DELETE FROM product_variants WHERE id = ?";
                 PreparedStatement ps = con.prepareStatement(sql);
@@ -417,7 +470,12 @@ public class AdminServlet extends HttpServlet {
                 ps.executeUpdate();
                 ps.close();
 
-                response.sendRedirect("admin?tab=products&success=Variant deleted successfully.");
+                String redirectTab = request.getParameter("redirectTab");
+                if ("product-details".equalsIgnoreCase(redirectTab) && productId > 0) {
+                    response.sendRedirect("admin?tab=product-details&id=" + productId + "&success=Variant deleted successfully.");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Variant deleted successfully.");
+                }
 
             }
             
@@ -440,10 +498,24 @@ public class AdminServlet extends HttpServlet {
                     imgPs.close();
                 }
 
-                response.sendRedirect("admin?tab=products&success=Images uploaded successfully!");
+                String redirectTab = request.getParameter("redirectTab");
+                if ("product-details".equalsIgnoreCase(redirectTab)) {
+                    response.sendRedirect("admin?tab=product-details&id=" + productId + "&success=Images uploaded successfully!");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Images uploaded successfully!");
+                }
 
             } else if ("deleteProductImage".equalsIgnoreCase(action)) {
                 int imageId = Integer.parseInt(request.getParameter("imageId"));
+                int productId = 0;
+                try (PreparedStatement psGet = con.prepareStatement("SELECT product_id FROM product_images WHERE id = ?")) {
+                    psGet.setInt(1, imageId);
+                    try (ResultSet rsGet = psGet.executeQuery()) {
+                        if (rsGet.next()) {
+                            productId = rsGet.getInt("product_id");
+                        }
+                    }
+                }
 
                 String sql = "DELETE FROM product_images WHERE id = ?";
                 PreparedStatement ps = con.prepareStatement(sql);
@@ -451,7 +523,12 @@ public class AdminServlet extends HttpServlet {
                 ps.executeUpdate();
                 ps.close();
 
-                response.sendRedirect("admin?tab=products&success=Image deleted successfully.");
+                String redirectTab = request.getParameter("redirectTab");
+                if ("product-details".equalsIgnoreCase(redirectTab) && productId > 0) {
+                    response.sendRedirect("admin?tab=product-details&id=" + productId + "&success=Image deleted successfully.");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Image deleted successfully.");
+                }
 
             } else if ("setPrimaryProductImage".equalsIgnoreCase(action)) {
                 int imageId = Integer.parseInt(request.getParameter("imageId"));
@@ -488,7 +565,12 @@ public class AdminServlet extends HttpServlet {
                 rs.close();
                 selectPs.close();
 
-                response.sendRedirect("admin?tab=products&success=Primary image updated successfully.");
+                String redirectTab = request.getParameter("redirectTab");
+                if ("product-details".equalsIgnoreCase(redirectTab)) {
+                    response.sendRedirect("admin?tab=product-details&id=" + productId + "&success=Primary image updated successfully.");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Primary image updated successfully.");
+                }
 
             } else if ("reorderProductImages".equalsIgnoreCase(action)) {
                 String imageOrder = request.getParameter("imageOrder");
@@ -515,7 +597,230 @@ public class AdminServlet extends HttpServlet {
                     ps.close();
                 }
 
-                response.sendRedirect("admin?tab=products&success=Image order updated successfully.");
+                String redirectTab = request.getParameter("redirectTab");
+                String pIdStr = request.getParameter("productId");
+                if ("product-details".equalsIgnoreCase(redirectTab) && pIdStr != null) {
+                    response.sendRedirect("admin?tab=product-details&id=" + pIdStr + "&success=Image order updated successfully.");
+                } else {
+                    response.sendRedirect("admin?tab=products&success=Image order updated successfully.");
+                }
+
+            } else if ("addPromotion".equalsIgnoreCase(action)) {
+                String name = request.getParameter("name");
+                String discountType = request.getParameter("discountType");
+                double discountAmount = Double.parseDouble(request.getParameter("discountAmount"));
+                String targetType = request.getParameter("targetType");
+                String targetValue = request.getParameter("targetValue");
+                String startDateStr = request.getParameter("startDate");
+                String endDateStr = request.getParameter("endDate");
+                int isActive = Integer.parseInt(request.getParameter("isActive"));
+
+                String sql = "INSERT INTO promotions (name, discount_type, discount_amount, target_type, target_value, start_date, end_date, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, name);
+                ps.setString(2, discountType);
+                ps.setDouble(3, discountAmount);
+                ps.setString(4, targetType);
+                ps.setString(5, targetValue);
+                ps.setTimestamp(6, parseTimestamp(startDateStr));
+                ps.setTimestamp(7, parseTimestamp(endDateStr));
+                ps.setInt(8, isActive);
+                ps.executeUpdate();
+                ps.close();
+
+                String redirectTab = request.getParameter("redirectTab");
+                String pId = request.getParameter("productId");
+                if ("product-details".equalsIgnoreCase(redirectTab) && pId != null) {
+                    response.sendRedirect("admin?tab=product-details&id=" + pId + "&success=Promotion added successfully!");
+                } else {
+                    response.sendRedirect("admin?tab=promotions&success=Promotion added successfully!");
+                }
+
+            } else if ("editPromotion".equalsIgnoreCase(action)) {
+                int promotionId = Integer.parseInt(request.getParameter("promotionId"));
+                String name = request.getParameter("name");
+                String discountType = request.getParameter("discountType");
+                double discountAmount = Double.parseDouble(request.getParameter("discountAmount"));
+                String targetType = request.getParameter("targetType");
+                String targetValue = request.getParameter("targetValue");
+                String startDateStr = request.getParameter("startDate");
+                String endDateStr = request.getParameter("endDate");
+                int isActive = Integer.parseInt(request.getParameter("isActive"));
+
+                String sql = "UPDATE promotions SET name=?, discount_type=?, discount_amount=?, target_type=?, target_value=?, start_date=?, end_date=?, is_active=? WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, name);
+                ps.setString(2, discountType);
+                ps.setDouble(3, discountAmount);
+                ps.setString(4, targetType);
+                ps.setString(5, targetValue);
+                ps.setTimestamp(6, parseTimestamp(startDateStr));
+                ps.setTimestamp(7, parseTimestamp(endDateStr));
+                ps.setInt(8, isActive);
+                ps.setInt(9, promotionId);
+                ps.executeUpdate();
+                ps.close();
+
+                response.sendRedirect("admin?tab=promotions&success=Promotion updated successfully!");
+
+            } else if ("deletePromotion".equalsIgnoreCase(action)) {
+                int promotionId = Integer.parseInt(request.getParameter("promotionId"));
+                String sql = "DELETE FROM promotions WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, promotionId);
+                ps.executeUpdate();
+                ps.close();
+
+                String redirectTab = request.getParameter("redirectTab");
+                String pId = request.getParameter("productId");
+                if ("product-details".equalsIgnoreCase(redirectTab) && pId != null) {
+                    response.sendRedirect("admin?tab=product-details&id=" + pId + "&success=Promotion deleted successfully!");
+                } else {
+                    response.sendRedirect("admin?tab=promotions&success=Promotion deleted successfully.");
+                }
+
+            } else if ("addCoupon".equalsIgnoreCase(action)) {
+                String code = request.getParameter("code").trim().toUpperCase();
+                String discountType = request.getParameter("discountType");
+                double discountAmount = Double.parseDouble(request.getParameter("discountAmount"));
+                String expiryDateStr = request.getParameter("expiryDate");
+                String usageLimitStr = request.getParameter("usageLimit");
+                double minPurchase = Double.parseDouble(request.getParameter("minimumPurchase"));
+                int isActive = Integer.parseInt(request.getParameter("isActive"));
+
+                String sql = "INSERT INTO coupons (code, discount_type, discount_amount, expiry_date, usage_limit, minimum_purchase_amount, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, code);
+                ps.setString(2, discountType);
+                ps.setDouble(3, discountAmount);
+                ps.setTimestamp(4, parseTimestamp(expiryDateStr));
+                if (usageLimitStr != null && !usageLimitStr.trim().isEmpty()) {
+                    ps.setInt(5, Integer.parseInt(usageLimitStr.trim()));
+                } else {
+                    ps.setNull(5, java.sql.Types.INTEGER);
+                }
+                ps.setDouble(6, minPurchase);
+                ps.setInt(7, isActive);
+                ps.executeUpdate();
+                ps.close();
+
+                response.sendRedirect("admin?tab=coupons&success=Coupon added successfully!");
+
+            } else if ("editCoupon".equalsIgnoreCase(action)) {
+                int couponId = Integer.parseInt(request.getParameter("couponId"));
+                String code = request.getParameter("code").trim().toUpperCase();
+                String discountType = request.getParameter("discountType");
+                double discountAmount = Double.parseDouble(request.getParameter("discountAmount"));
+                String expiryDateStr = request.getParameter("expiryDate");
+                String usageLimitStr = request.getParameter("usageLimit");
+                double minPurchase = Double.parseDouble(request.getParameter("minimumPurchase"));
+                int isActive = Integer.parseInt(request.getParameter("isActive"));
+
+                String sql = "UPDATE coupons SET code=?, discount_type=?, discount_amount=?, expiry_date=?, usage_limit=?, minimum_purchase_amount=?, is_active=? WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, code);
+                ps.setString(2, discountType);
+                ps.setDouble(3, discountAmount);
+                ps.setTimestamp(4, parseTimestamp(expiryDateStr));
+                if (usageLimitStr != null && !usageLimitStr.trim().isEmpty()) {
+                    ps.setInt(5, Integer.parseInt(usageLimitStr.trim()));
+                } else {
+                    ps.setNull(5, java.sql.Types.INTEGER);
+                }
+                ps.setDouble(6, minPurchase);
+                ps.setInt(7, isActive);
+                ps.setInt(8, couponId);
+                ps.executeUpdate();
+                ps.close();
+
+                response.sendRedirect("admin?tab=coupons&success=Coupon updated successfully!");
+
+            } else if ("deleteCoupon".equalsIgnoreCase(action)) {
+                int couponId = Integer.parseInt(request.getParameter("couponId"));
+                String sql = "DELETE FROM coupons WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, couponId);
+                ps.executeUpdate();
+                ps.close();
+
+                response.sendRedirect("admin?tab=coupons&success=Coupon deleted successfully.");
+
+            } else if ("toggleCouponStatus".equalsIgnoreCase(action)) {
+                int couponId = Integer.parseInt(request.getParameter("couponId"));
+                String sql = "UPDATE coupons SET is_active = 1 - is_active WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, couponId);
+                ps.executeUpdate();
+                ps.close();
+
+                response.sendRedirect("admin?tab=coupons&success=Coupon status toggled.");
+
+            } else if ("updateAnnouncement".equalsIgnoreCase(action)) {
+                String text = request.getParameter("text");
+                int isActive = Integer.parseInt(request.getParameter("isActive"));
+                String startDateStr = request.getParameter("startDate");
+                String endDateStr = request.getParameter("endDate");
+
+                String checkSql = "SELECT id FROM announcements LIMIT 1";
+                PreparedStatement checkPs = con.prepareStatement(checkSql);
+                ResultSet rsCheck = checkPs.executeQuery();
+                if (rsCheck.next()) {
+                    int id = rsCheck.getInt("id");
+                    String sql = "UPDATE announcements SET text=?, is_active=?, start_date=?, end_date=? WHERE id=?";
+                    PreparedStatement ps = con.prepareStatement(sql);
+                    ps.setString(1, text);
+                    ps.setInt(2, isActive);
+                    ps.setTimestamp(3, parseTimestamp(startDateStr));
+                    ps.setTimestamp(4, parseTimestamp(endDateStr));
+                    ps.setInt(5, id);
+                    ps.executeUpdate();
+                    ps.close();
+                } else {
+                    String sql = "INSERT INTO announcements (text, is_active, start_date, end_date) VALUES (?, ?, ?, ?)";
+                    PreparedStatement ps = con.prepareStatement(sql);
+                    ps.setString(1, text);
+                    ps.setInt(2, isActive);
+                    ps.setTimestamp(3, parseTimestamp(startDateStr));
+                    ps.setTimestamp(4, parseTimestamp(endDateStr));
+                    ps.executeUpdate();
+                    ps.close();
+                }
+                rsCheck.close();
+                checkPs.close();
+
+                response.sendRedirect("admin?tab=settings&success=Announcement updated successfully!");
+
+            } else if ("toggleReviewVisibility".equalsIgnoreCase(action)) {
+                int reviewId = Integer.parseInt(request.getParameter("reviewId"));
+                String sql = "UPDATE reviews SET is_hidden = 1 - is_hidden WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, reviewId);
+                ps.executeUpdate();
+                ps.close();
+
+                String redirectTab = request.getParameter("redirectTab");
+                String pId = request.getParameter("productId");
+                if ("product-details".equalsIgnoreCase(redirectTab) && pId != null) {
+                    response.sendRedirect("admin?tab=product-details&id=" + pId + "&success=Review visibility toggled.");
+                } else {
+                    response.sendRedirect("admin?tab=reviews&success=Review visibility toggled.");
+                }
+
+            } else if ("deleteReviewAdmin".equalsIgnoreCase(action)) {
+                int reviewId = Integer.parseInt(request.getParameter("reviewId"));
+                String sql = "DELETE FROM reviews WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, reviewId);
+                ps.executeUpdate();
+                ps.close();
+
+                String redirectTab = request.getParameter("redirectTab");
+                String pId = request.getParameter("productId");
+                if ("product-details".equalsIgnoreCase(redirectTab) && pId != null) {
+                    response.sendRedirect("admin?tab=product-details&id=" + pId + "&success=Review deleted successfully.");
+                } else {
+                    response.sendRedirect("admin?tab=reviews&success=Review deleted successfully.");
+                }
 
             } else {
                 response.sendRedirect("admin?tab=products&error=Unknown action: " + action);
@@ -526,6 +831,21 @@ public class AdminServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.sendRedirect("admin?tab=" + tab + "&error=Operation failed: " + java.net.URLEncoder.encode(e.getMessage(), "UTF-8"));
+        }
+    }
+
+    private Timestamp parseTimestamp(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return null;
+        }
+        String clean = str.replace("T", " ").trim();
+        if (clean.length() == 16) {
+            clean += ":00";
+        }
+        try {
+            return Timestamp.valueOf(clean);
+        } catch (Exception e) {
+            return null;
         }
     }
 

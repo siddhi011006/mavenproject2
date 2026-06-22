@@ -113,9 +113,24 @@
     String requestURI = request.getRequestURI();
     boolean showAnnouncement = !requestURI.contains("admin") && !requestURI.contains("admin-dashboard.jsp");
 %>
-<% if (showAnnouncement) { %>
+<% if (showAnnouncement) { 
+    String annMessage = "Complimentary Standard Shipping on Orders Over " + com.mycompany.mavenproject2.CurrencyHelper.formatPrice(1500.0, currentCountry);
+    try (java.sql.Connection conAnn = com.mycompany.mavenproject2.DBConnection.getConnection();
+         java.sql.PreparedStatement psAnn = conAnn.prepareStatement(
+             "SELECT text FROM announcements WHERE is_active = 1 " +
+             "AND (start_date IS NULL OR start_date <= CURRENT_TIMESTAMP) " +
+             "AND (end_date IS NULL OR end_date >= CURRENT_TIMESTAMP) LIMIT 1")) {
+        try (java.sql.ResultSet rsAnn = psAnn.executeQuery()) {
+            if (rsAnn.next()) {
+                annMessage = rsAnn.getString("text");
+            }
+        }
+    } catch (Exception e) {
+        // Fallback to default shipping notice
+    }
+%>
 <div class="announcement-bar">
-    <p>Complimentary Standard Shipping on Orders Over <%= com.mycompany.mavenproject2.CurrencyHelper.formatPrice(1500.0, currentCountry) %></p>
+    <p><%= annMessage %></p>
 </div>
 <% } %>
 

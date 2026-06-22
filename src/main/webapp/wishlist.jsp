@@ -19,18 +19,19 @@
     if (userId != null) {
         try {
             con = DBConnection.getConnection();
-            String sql = "SELECT p.id, p.name, p.price, p.category, p.image_url, p.stock, p.rating "
-                       + "FROM wishlist w JOIN products p ON w.product_id = p.id WHERE w.user_id = ?";
+            String sql = "SELECT p.id, p.name, p.price, p.category, p.stock, p.rating "
+                       + "FROM wishlist w JOIN products p ON w.product_id = p.id WHERE w.user_id = ? AND p.status = 'ACTIVE'";
             ps = con.prepareStatement(sql);
             ps.setInt(1, userId);
             rs = ps.executeQuery();
             while (rs.next()) {
+                int itemId = rs.getInt("id");
                 CartItem item = new CartItem(
-                    rs.getInt("id"),
+                    itemId,
                     rs.getString("name"),
                     rs.getDouble("price"),
                     rs.getString("category"),
-                    rs.getString("image_url"),
+                    com.mycompany.mavenproject2.ProductImageHelper.getProductImage(itemId),
                     1, // quantity placeholder
                     rs.getInt("stock")
                 );
@@ -53,7 +54,7 @@
             if (!guestWishlist.isEmpty()) {
                 try {
                     con = DBConnection.getConnection();
-                    String sql = "SELECT id, name, price, category, image_url, stock, rating FROM products WHERE id = ?";
+                    String sql = "SELECT id, name, price, category, stock, rating FROM products WHERE id = ? AND status = 'ACTIVE'";
                     ps = con.prepareStatement(sql);
                     for (Object idObj : guestWishlist) {
                         int prodId = 0;
@@ -66,11 +67,11 @@
                         rs = ps.executeQuery();
                         if (rs.next()) {
                             CartItem item = new CartItem(
-                                rs.getInt("id"),
+                                prodId,
                                 rs.getString("name"),
                                 rs.getDouble("price"),
                                 rs.getString("category"),
-                                rs.getString("image_url"),
+                                com.mycompany.mavenproject2.ProductImageHelper.getProductImage(prodId),
                                 1,
                                 rs.getInt("stock")
                             );

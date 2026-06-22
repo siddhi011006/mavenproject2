@@ -5,7 +5,7 @@
     // Enforce authentication & admin privileges
     HttpSession sess = request.getSession(false);
     if (sess == null || !"ADMIN".equalsIgnoreCase((String) sess.getAttribute("role"))) {
-        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied.");
+        response.sendRedirect(request.getContextPath() + "/");
         return;
     }
 
@@ -34,39 +34,45 @@
                 int isPrimary = rs.getInt("is_primary");
                 String vName = rs.getString("variant_name");
 %>
-<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding:10px; border-radius:10px; border:1px solid var(--border-light);">
-    <div style="display:flex; align-items:center; gap:12px; text-align:left;">
+<div class="draggable-image-item" 
+     draggable="true" 
+     data-image-id="<%= imgId %>" 
+     ondragstart="dragStart(event)" 
+     ondragover="dragOver(event)" 
+     ondrop="dragDrop(event)"
+     style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding:10px; border-radius:10px; border:1px solid var(--border-light); cursor: grab; transition: all 0.2s ease;">
+    
+    <div style="display:flex; align-items:center; gap:12px; text-align:left; pointer-events: none;">
+        <i class="fas fa-grip-lines" style="color:var(--text-muted); cursor: grab; margin-right:5px; pointer-events: auto;"></i>
         <img src="<%= url %>" style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
         <div>
-            <div style="font-size:0.75rem; color:var(--text-muted);"><%= vName != null ? "Variant: " + vName : "General Image" %></div>
-            <div style="margin-top:4px;">
-                <!-- Reorder Form -->
-                <form action="AdminServlet" method="POST" style="display:inline-flex; align-items:center; gap:5px;">
-                    <input type="hidden" name="action" value="reorderProductImages">
-                    <input type="hidden" name="imageOrder" value="<%= imgId %>">
-                    <span style="font-size:0.7rem; color:var(--text-secondary);">Sort:</span>
-                    <input type="number" name="sort_order_val" value="<%= sortOrder %>" style="width:45px; padding:3px; font-size:0.7rem; border-radius:4px; border:1px solid var(--border-color); text-align:center; background:var(--bg-dark); color:var(--text-primary);"
-                           onchange="submitReorder(<%= imgId %>, this.value)">
-                </form>
-            </div>
+            <% if (vName != null) { %>
+                <div style="font-size:0.75rem; color:var(--gold); font-weight:600;"><i class="fas fa-tags" style="margin-right:3px;"></i> Variant Image (<%= vName %>)</div>
+            <% } else { %>
+                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;"><i class="fas fa-image" style="margin-right:3px;"></i> Product General Image</div>
+            <% } %>
+            <div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;">Sort Order: <%= sortOrder %></div>
         </div>
     </div>
     
     <div style="display:flex; align-items:center; gap:6px;">
         <% if (isPrimary == 1) { %>
-            <span style="font-size:0.65rem; font-weight:700; color:var(--gold); border:1px solid var(--gold); padding:3px 8px; border-radius:12px; background:rgba(197,171,87,0.05);">Primary</span>
+            <span style="font-size:0.65rem; font-weight:700; color:var(--gold); border:1px solid var(--gold); padding:3px 8px; border-radius:12px; background:rgba(197,171,87,0.05);"><i class="fas fa-star" style="margin-right:3px;"></i> Main Image</span>
         <% } else if (vName == null) { %>
             <form action="AdminServlet" method="POST" style="margin:0;">
                 <input type="hidden" name="action" value="setPrimaryProductImage">
                 <input type="hidden" name="imageId" value="<%= imgId %>">
                 <input type="hidden" name="productId" value="<%= productId %>">
-                <button type="submit" class="btn-outline" style="padding:4px 8px; font-size:0.65rem; border-radius:6px; text-transform:none;">Set Primary</button>
+                <input type="hidden" name="redirectTab" value="product-details">
+                <button type="submit" class="btn-outline" style="padding:4px 8px; font-size:0.65rem; border-radius:6px; text-transform:none;">Set Main</button>
             </form>
         <% } %>
         
         <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Delete this image from gallery?');">
             <input type="hidden" name="action" value="deleteProductImage">
             <input type="hidden" name="imageId" value="<%= imgId %>">
+            <input type="hidden" name="productId" value="<%= productId %>">
+            <input type="hidden" name="redirectTab" value="product-details">
             <button type="submit" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:1.1rem; padding:4px 8px; display:inline-flex; align-items:center;"><i class="fas fa-trash-alt"></i></button>
         </form>
     </div>
@@ -83,29 +89,63 @@
 %>
 
 <script>
-    function submitReorder(imgId, val) {
-        // Post reorder asynchronously or submit a quick action
-        const params = new URLSearchParams();
-        params.append('action', 'reorderProductImages');
-        params.append('imageOrder', imgId);
+    let dragSrcEl = null;
+
+    function dragStart(e) {
+        dragSrcEl = this;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.outerHTML);
+        this.style.opacity = '0.4';
+    }
+
+    function dragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function dragDrop(e) {
+        e.stopPropagation();
+        if (dragSrcEl !== this) {
+            // Swap node positions
+            let parent = this.parentNode;
+            let nextSibling = this.nextSibling === dragSrcEl ? this : this.nextSibling;
+            parent.insertBefore(dragSrcEl, this);
+            parent.insertBefore(this, nextSibling);
+            
+            // Post new order to AdminServlet
+            recalculateAndSubmitOrder();
+        }
+        return false;
+    }
+
+    function recalculateAndSubmitOrder() {
+        const items = document.querySelectorAll('.draggable-image-item');
+        const ids = Array.from(items).map(item => item.getAttribute('data-image-id'));
         
-        // Wait, to support reordering single item to a specific sort order, let's make sure
-        // we can submit it or trigger form. Let's do it via fetch:
         fetch('AdminServlet', {
             method: 'POST',
             body: new URLSearchParams({
                 action: 'reorderProductImages',
-                imageOrder: imgId + '',
-                sort_order_val: val
+                imageOrder: ids.join(','),
+                productId: '<%= productId %>',
+                redirectTab: 'product-details'
             }),
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         }).then(() => {
-            // refresh
             if (typeof fetchGalleryImages === 'function') {
-                fetchGalleryImages(document.getElementById('galleryProductId').value);
+                fetchGalleryImages(<%= productId %>);
             }
         });
     }
+
+    document.querySelectorAll('.draggable-image-item').forEach(item => {
+        item.addEventListener('dragend', function() {
+            this.style.opacity = '1';
+        });
+    });
 </script>

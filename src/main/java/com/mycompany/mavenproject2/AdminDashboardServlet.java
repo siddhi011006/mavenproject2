@@ -32,13 +32,13 @@ public class AdminDashboardServlet extends HttpServlet {
         
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("user_id") == null) {
-            response.sendRedirect(request.getContextPath() + "/admin-login.jsp?error=Please sign in to access the Admin Panel.");
+            response.sendRedirect(request.getContextPath() + "/");
             return;
         }
 
         String role = (String) session.getAttribute("role");
         if (!"ADMIN".equalsIgnoreCase(role)) {
-            response.sendRedirect(request.getContextPath() + "/access-denied.jsp");
+            response.sendRedirect(request.getContextPath() + "/");
             return;
         }
 

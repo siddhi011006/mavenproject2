@@ -203,8 +203,8 @@
                 
                 try {
                     con = DBConnection.getConnection();
-                    // Fetch top 8 highest-rated products
-                    String sql = "SELECT id, name, description, price, category, image_url, rating FROM products ORDER BY rating DESC, price DESC LIMIT 8";
+                    // Fetch top 8 highest-rated products (ACTIVE only)
+                    String sql = "SELECT id, name, description, price, category, rating FROM products WHERE status = 'ACTIVE' ORDER BY rating DESC, price DESC LIMIT 8";
                     ps = con.prepareStatement(sql);
                     rs = ps.executeQuery();
                     
@@ -214,7 +214,7 @@
                         String name = rs.getString("name");
                         double price = rs.getDouble("price");
                         String category = rs.getString("category");
-                        String imageUrl = rs.getString("image_url");
+                        String imageUrl = com.mycompany.mavenproject2.ProductImageHelper.getProductImage(id);
                         int rating = rs.getInt("rating");
             %>
             <div class="card">

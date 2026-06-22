@@ -138,8 +138,8 @@
                 int count = 0;
                 try {
                     con = DBConnection.getConnection();
-                    // Fetch top 4 featured products
-                    String sql = "SELECT id, name, description, price, category, image_url, rating FROM products LIMIT 4";
+                    // Fetch top 4 featured products (ACTIVE only)
+                    String sql = "SELECT id, name, description, price, category, rating FROM products WHERE status = 'ACTIVE' LIMIT 4";
                     ps = con.prepareStatement(sql);
                     rs = ps.executeQuery();
                     while (rs.next()) {
@@ -148,7 +148,7 @@
                         String name = rs.getString("name");
                         double price = rs.getDouble("price");
                         String category = rs.getString("category");
-                        String imageUrl = rs.getString("image_url");
+                        String imageUrl = com.mycompany.mavenproject2.ProductImageHelper.getProductImage(id);
                         int rating = rs.getInt("rating");
             %>
             <div class="card">

@@ -191,10 +191,14 @@
                                 <!-- Details -->
                                 <td class="cart-item-cell">
                                     <div class="cart-product-details">
-                                        <img src="<%= item.imageUrl %>" alt="<%= item.name %>">
+                                        <a href="product-details.jsp?id=<%= item.productId %><%= item.variantId != null ? "&variantId=" + item.variantId : "" %>">
+                                            <img src="<%= item.imageUrl %>" alt="<%= item.name %>">
+                                        </a>
                                         <div>
                                             <div class="cart-product-name">
-                                                <%= item.name %>
+                                                <a href="product-details.jsp?id=<%= item.productId %><%= item.variantId != null ? "&variantId=" + item.variantId : "" %>" style="color:inherit; text-decoration:none;">
+                                                    <%= item.name %>
+                                                </a>
                                                 <% if (item.variantName != null && !item.variantName.trim().isEmpty() && !"Standard".equalsIgnoreCase(item.variantName)) { %>
                                                     <span style="font-size: 0.8rem; font-weight: 550; color: var(--gold); display: flex; align-items: center; gap: 5px; margin-top: 5px;">
                                                         <% if (item.colorCode != null && item.colorCode.startsWith("#")) { %>

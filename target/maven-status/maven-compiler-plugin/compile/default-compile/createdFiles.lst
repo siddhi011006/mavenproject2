@@ -3,9 +3,12 @@ com\mycompany\mavenproject2\ReviewServlet.class
 com\mycompany\mavenproject2\alogin.class
 com\mycompany\mavenproject2\JakartaRestConfiguration.class
 com\mycompany\mavenproject2\ContactServlet.class
+com\mycompany\mavenproject2\PromotionHelper.class
 com\mycompany\mavenproject2\AdminDashboardServlet.class
 com\mycompany\mavenproject2\CartItem.class
+com\mycompany\mavenproject2\ProductImageHelper.class
 com\mycompany\mavenproject2\CheckoutServlet.class
+com\mycompany\mavenproject2\CouponHelper$CouponResult.class
 com\mycompany\mavenproject2\AdminServlet.class
 com\mycompany\mavenproject2\EmailUtility$1.class
 com\mycompany\mavenproject2\resources\JakartaEE10Resource.class
@@ -16,6 +19,9 @@ com\mycompany\mavenproject2\AdminLogoutServlet.class
 com\mycompany\mavenproject2\Login.class
 com\mycompany\mavenproject2\CheckoutServlet$CartItemTemp.class
 com\mycompany\mavenproject2\CurrencyHelper.class
+com\mycompany\mavenproject2\AdminSecurityFilter.class
+com\mycompany\mavenproject2\CouponHelper.class
+com\mycompany\mavenproject2\SchemaInitializer.class
 com\mycompany\mavenproject2\AddressServlet.class
 com\mycompany\mavenproject2\CancelOrderServlet.class
 com\mycompany\mavenproject2\AdminLoginServlet.class

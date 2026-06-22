@@ -7,7 +7,7 @@
     // Ensure authentication & admin privileges
     HttpSession s = request.getSession(false);
     if (s == null || !"ADMIN".equalsIgnoreCase((String) s.getAttribute("role"))) {
-        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access Denied. Administrative privileges required.");
+        response.sendRedirect(request.getContextPath() + "/");
         return;
     }
 

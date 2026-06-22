@@ -232,7 +232,7 @@
                     PreparedStatement psCount = null;
                     ResultSet rsCount = null;
                     try {
-                        StringBuilder countQueryBuilder = new StringBuilder("SELECT COUNT(*) FROM products WHERE 1=1");
+                        StringBuilder countQueryBuilder = new StringBuilder("SELECT COUNT(*) FROM products WHERE status = 'ACTIVE'");
                         if (!"all".equals(paramCategory)) {
                             countQueryBuilder.append(" AND category = ?");
                         }
@@ -275,7 +275,7 @@
                     int offset = (currentPage - 1) * productsPerPage;
                     
                     // Build dynamic SQL
-                    StringBuilder queryBuilder = new StringBuilder("SELECT id, name, description, price, category, image_url, rating FROM products WHERE 1=1");
+                    StringBuilder queryBuilder = new StringBuilder("SELECT id, name, description, price, category, image_url, rating FROM products WHERE status = 'ACTIVE'");
                     
                     if (!"all".equals(paramCategory)) {
                         queryBuilder.append(" AND category = ?");
@@ -312,7 +312,7 @@
                         String name = rs.getString("name");
                         double price = rs.getDouble("price");
                         String category = rs.getString("category");
-                        String imageUrl = rs.getString("image_url");
+                        String imageUrl = com.mycompany.mavenproject2.ProductImageHelper.getProductImage(id);
                         int rating = rs.getInt("rating");
             %>
             <div class="card" style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: var(--shadow-lux); transition: var(--transition);">
@@ -323,6 +323,11 @@
                             title="<%= wishlistedIds.contains(id) ? "Remove from Wishlist" : "Add to Wishlist" %>">
                         <i class="<%= wishlistedIds.contains(id) ? "fas" : "far" %> fa-heart"></i>
                     </button>
+                    <% if ("ADMIN".equalsIgnoreCase(navRole)) { %>
+                        <div class="admin-quick-actions" style="position: absolute; bottom: 10px; left: 10px; display: flex; gap: 8px; z-index: 10;">
+                            <a href="admin?tab=product-details&id=<%= id %>" title="Quick Edit Specs" style="background: var(--burgundy); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; box-shadow: var(--shadow-lux);"><i class="fas fa-edit"></i></a>
+                        </div>
+                    <% } %>
                     <a href="product-details.jsp?id=<%= id %>">
                         <img src="<%= imageUrl %>" alt="<%= name %>" style="width: 100%; height: 100%; object-fit: cover; transition: var(--transition);">
                     </a>

@@ -8,7 +8,7 @@
     // Ensure authentication & admin privileges
     HttpSession s = request.getSession(false);
     if (s == null || !"ADMIN".equalsIgnoreCase((String) s.getAttribute("role"))) {
-        response.sendRedirect(request.getContextPath() + "/access-denied.jsp");
+        response.sendRedirect(request.getContextPath() + "/");
         return;
     }
 
@@ -142,6 +142,21 @@
                     <li>
                         <button class="<%= "reports".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=reports'">
                             <i class="fas fa-file-invoice-dollar"></i> Sales Reports
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "promotions".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=promotions'">
+                            <i class="fas fa-percentage"></i> Promotions
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "coupons".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=coupons'">
+                            <i class="fas fa-ticket-alt"></i> Coupons
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "reviews".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=reviews'">
+                            <i class="fas fa-star"></i> Reviews
                         </button>
                     </li>
                     <li>
@@ -328,10 +343,41 @@
                         </button>
                     </div>
 
-                    <!-- Search Catalog Input -->
-                    <div class="search-input-wrapper" style="margin-bottom:25px; text-align:left;">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="catalogSearch" onkeyup="searchCatalog()" placeholder="Search catalog by name or category...">
+                    <!-- Advanced Filters Bar -->
+                    <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap:15px; margin-bottom:25px; align-items:center;">
+                        <div class="search-input-wrapper" style="margin-bottom:0; text-align:left; width:100%;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="catalogSearch" onkeyup="filterCatalog()" placeholder="Search by name, SKU, brand...">
+                        </div>
+                        <div>
+                            <select id="categoryFilter" onchange="filterCatalog()" style="padding:10px 15px; border-radius:12px; background:var(--bg-card); font-size:0.85rem; width:100%; border:1px solid var(--border-color); color:var(--text-primary);">
+                                <option value="all">All Categories</option>
+                                <% for (String catName : categoriesList) { %>
+                                    <option value="<%= catName %>"><%= catName %></option>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="statusFilter" onchange="filterCatalog()" style="padding:10px 15px; border-radius:12px; background:var(--bg-card); font-size:0.85rem; width:100%; border:1px solid var(--border-color); color:var(--text-primary);">
+                                <option value="ALL">All Statuses</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DRAFT">Draft</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="stockFilter" onchange="filterCatalog()" style="padding:10px 15px; border-radius:12px; background:var(--bg-card); font-size:0.85rem; width:100%; border:1px solid var(--border-color); color:var(--text-primary);">
+                                <option value="ALL">All Stock Levels</option>
+                                <option value="LOW">Low Stock (&lt; 10)</option>
+                                <option value="OUT">Out of Stock</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="onSaleFilter" onchange="filterCatalog()" style="padding:10px 15px; border-radius:12px; background:var(--bg-card); font-size:0.85rem; width:100%; border:1px solid var(--border-color); color:var(--text-primary);">
+                                <option value="ALL">All Prices</option>
+                                <option value="SALE">On Sale</option>
+                                <option value="NORMAL">Normal Price</option>
+                            </select>
+                        </div>
                     </div>
 
                     <table class="admin-table" id="catalogTable">
@@ -351,7 +397,7 @@
                                 try {
                                     Connection con = DBConnection.getConnection();
                                     Statement st = con.createStatement();
-                                    ResultSet rs = st.executeQuery("SELECT id, name, description, price, category, image_url, stock, rating FROM products ORDER BY id DESC");
+                                    ResultSet rs = st.executeQuery("SELECT id, name, description, price, category, image_url, stock, rating, brand, sku, status FROM products ORDER BY id DESC");
                                     while (rs.next()) {
                                         int id = rs.getInt("id");
                                         String name = rs.getString("name");
@@ -361,10 +407,21 @@
                                         String img = rs.getString("image_url");
                                         int stock = rs.getInt("stock");
                                         int rating = rs.getInt("rating");
+                                        String brand = rs.getString("brand");
+                                        String sku = rs.getString("sku");
+                                        String status = rs.getString("status");
+                                        boolean onSale = com.mycompany.mavenproject2.PromotionHelper.hasPromotion(id, cat, brand);
                             %>
-                            <tr class="product-row" style="border-bottom:none;">
-                                <td><img src="<%= img %>" alt="" style="width:50px; height:50px; border-radius:8px; object-fit:cover; border:1px solid var(--border-light);"></td>
-                                <td style="font-weight:600; color:var(--text-primary);" class="prod-name"><%= name %></td>
+                            <tr class="product-row" style="border-bottom:none;"
+                                data-name="<%= name.toLowerCase().replace("\"", "&quot;") %>"
+                                data-sku="<%= (sku != null ? sku.toLowerCase().replace("\"", "&quot;") : "") %>"
+                                data-brand="<%= (brand != null ? brand.toLowerCase().replace("\"", "&quot;") : "") %>"
+                                data-category="<%= cat.toLowerCase().replace("\"", "&quot;") %>"
+                                data-status="<%= (status != null ? status.toUpperCase() : "ACTIVE") %>"
+                                data-stock="<%= stock %>"
+                                data-onsale="<%= onSale ? "true" : "false" %>">
+                                <td><a href="admin?tab=product-details&id=<%= id %>"><img src="<%= img %>" alt="" style="width:50px; height:50px; border-radius:8px; object-fit:cover; border:1px solid var(--border-light);"></a></td>
+                                <td style="font-weight:600; color:var(--text-primary);" class="prod-name"><a href="admin?tab=product-details&id=<%= id %>" style="color:inherit; text-decoration:none;"><%= name %></a></td>
                                 <td style="text-transform:uppercase; font-size:0.75rem; color:var(--gold); font-weight:600;" class="prod-cat"><%= cat %></td>
                                 <td>₹<%= String.format("%.2f", price) %></td>
                                 <td style="font-weight:600; color: <%= (stock < 10) ? "var(--danger)" : "var(--text-secondary)" %>"><%= stock %></td>
@@ -380,10 +437,10 @@
                                     </form>
                                 </td>
                                 <td style="text-align:right;">
-                                    <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; margin-right:5px; text-transform:none;"
-                                            onclick="openEditModal(<%= id %>, '<%= name.replace("'", "\\'") %>', '<%= desc %>', <%= price %>, '<%= cat %>', '<%= img %>', <%= stock %>, <%= rating %>)">
+                                    <a class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; margin-right:5px; text-decoration:none; display:inline-block;"
+                                            href="admin?tab=product-details&id=<%= id %>">
                                         Edit Product
-                                    </button>
+                                    </a>
                                     <form action="AdminServlet" method="POST" style="display:inline-block;" onsubmit="return confirm('Delete product <%= name %>?');">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="id" value="<%= id %>">
@@ -394,7 +451,7 @@
                                 </td>
                             </tr>
                             <!-- Nested Variants Table Row -->
-                            <tr style="background: rgba(197, 171, 87, 0.015);">
+                            <tr style="background: rgba(197, 171, 87, 0.015);" class="variants-row">
                                 <td colspan="7" style="padding: 12px 30px; border-top:none; border-bottom: 2px solid var(--border-light);">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                                         <span style="font-size:0.8rem; font-weight:700; color:var(--gold);"><i class="fas fa-tags" style="margin-right:5px;"></i> Variants of <%= name %></span>
@@ -973,13 +1030,744 @@
                             </div>
                         </div>
 
+                        <!-- Announcement Banner Card -->
+                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux); height:fit-content;">
+                            <h3 style="font-size:1.3rem; margin-bottom:20px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;">Announcement Notice Banner</h3>
+                            <%
+                                String annText = "";
+                                int annActive = 0;
+                                String annStart = "";
+                                String annEnd = "";
+                                try (Connection innerCon = DBConnection.getConnection();
+                                     Statement innerSt = innerCon.createStatement();
+                                     ResultSet rsAnn = innerSt.executeQuery("SELECT text, is_active, start_date, end_date FROM announcements LIMIT 1")) {
+                                    if (rsAnn.next()) {
+                                        annText = rsAnn.getString("text");
+                                        annActive = rsAnn.getInt("is_active");
+                                        Timestamp startTs = rsAnn.getTimestamp("start_date");
+                                        if (startTs != null) annStart = startTs.toString().replace(" ", "T").substring(0, 16);
+                                        Timestamp endTs = rsAnn.getTimestamp("end_date");
+                                        if (endTs != null) annEnd = endTs.toString().replace(" ", "T").substring(0, 16);
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            %>
+                            <form action="AdminServlet" method="POST">
+                                <input type="hidden" name="action" value="updateAnnouncement">
+                                
+                                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Banner Text Notice</label>
+                                    <input type="text" name="text" value="<%= annText %>" placeholder="E.g. Free shipping on orders over ₹2000!" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Start Date</label>
+                                        <input type="datetime-local" name="startDate" value="<%= annStart %>" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                    </div>
+                                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">End Date</label>
+                                        <input type="datetime-local" name="endDate" value="<%= annEnd %>" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Banner Status</label>
+                                    <select name="isActive" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                        <option value="1" <%= annActive == 1 ? "selected" : "" %>>Active (Show Banner)</option>
+                                        <option value="0" <%= annActive == 0 ? "selected" : "" %>>Inactive (Hide Banner)</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn-gold" style="width:100%; border-radius:8px; padding:10px; font-size:0.85rem; font-weight:600;">
+                                    Apply Notice Banner Update
+                                </button>
+                            </form>
+                        </div>
+
                     </div>
-                <% } %>
+                <% } else if ("product-details".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                         PRODUCT DETAILS WORKSPACE TAB
+                         ========================================== -->
+                    <%
+                        String prodIdParam = request.getParameter("id");
+                        int prodId = 0;
+                        String pName = "", pDesc = "", pCat = "", pImg = "", pBrand = "", pSku = "", pStatus = "", pMetaTitle = "", pMetaDesc = "", pMetaKeywords = "";
+                        double pPrice = 0.0;
+                        int pStock = 0, pRating = 5;
+                        if (prodIdParam != null) {
+                            prodId = Integer.parseInt(prodIdParam.trim());
+                            try (Connection con = DBConnection.getConnection();
+                                 PreparedStatement ps = con.prepareStatement("SELECT * FROM products WHERE id = ?")) {
+                                ps.setInt(1, prodId);
+                                try (ResultSet rs = ps.executeQuery()) {
+                                    if (rs.next()) {
+                                        pName = rs.getString("name");
+                                        pDesc = rs.getString("description");
+                                        pPrice = rs.getDouble("price");
+                                        pCat = rs.getString("category");
+                                        pImg = rs.getString("image_url");
+                                        pStock = rs.getInt("stock");
+                                        pRating = rs.getInt("rating");
+                                        pBrand = rs.getString("brand");
+                                        pSku = rs.getString("sku");
+                                        pStatus = rs.getString("status");
+                                        pMetaTitle = rs.getString("meta_title");
+                                        pMetaDesc = rs.getString("meta_description");
+                                        pMetaKeywords = rs.getString("meta_keywords");
+                                    }
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    %>
+                    <div style="text-align:left; margin-bottom:25px;">
+                        <a href="admin?tab=products" class="btn-outline" style="padding:8px 16px; border-radius:8px; text-decoration:none; font-size:0.85rem; display:inline-block;">
+                            <i class="fas fa-arrow-left" style="margin-right:8px;"></i> Back to Catalog
+                        </a>
+                        <h2 style="font-size:1.8rem; border-bottom:none; margin:15px 0 0 0; padding-bottom:0; font-family:'Playfair Display', serif;">
+                            Manage Product: <span style="color:var(--gold);"><%= pName %></span>
+                        </h2>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:30px; text-align:left; margin-top:20px;">
+                        <!-- Left Column: Master Form (Specifications & SEO) -->
+                        <div style="display:flex; flex-direction:column; gap:25px;">
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux);">
+                                <h3 style="font-size:1.2rem; border:none; margin-top:0; margin-bottom:20px; color:var(--burgundy); font-family:'Playfair Display', serif;">Product Specifications</h3>
+                                
+                                <form action="AdminServlet" method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" name="action" value="edit">
+                                    <input type="hidden" name="id" value="<%= prodId %>">
+                                    <input type="hidden" name="redirectTab" value="product-details">
+                                    
+                                    <div class="form-group">
+                                        <label>Product Name</label>
+                                        <input type="text" name="name" value="<%= pName %>" required style="width:100%;">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <textarea name="description" rows="4" required style="width:100%; resize:vertical;"><%= pDesc %></textarea>
+                                    </div>
+
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                                        <div class="form-group">
+                                            <label>Price (₹)</label>
+                                            <input type="number" step="0.01" name="price" value="<%= pPrice %>" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Category</label>
+                                            <select name="category" required>
+                                                <% for (String catName : categoriesList) { %>
+                                                    <option value="<%= catName %>" <%= catName.equals(pCat) ? "selected" : "" %>><%= catName %></option>
+                                                <% } %>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                                        <div class="form-group">
+                                            <label>Brand</label>
+                                            <input type="text" name="brand" value="<%= pBrand != null ? pBrand : "LuxeGlow" %>" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>SKU Code</label>
+                                            <input type="text" name="sku" value="<%= pSku != null ? pSku : "" %>" placeholder="e.g. LG-PRD-001">
+                                        </div>
+                                    </div>
+
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                                        <div class="form-group">
+                                            <label>Stock Qty (Main)</label>
+                                            <input type="number" name="stock" value="<%= pStock %>" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Star Rating</label>
+                                            <input type="number" name="rating" min="1" max="5" value="<%= pRating %>" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select name="status" required>
+                                            <option value="ACTIVE" <%= "ACTIVE".equalsIgnoreCase(pStatus) ? "selected" : "" %>>Active (Visible Storefront)</option>
+                                            <option value="DRAFT" <%= "DRAFT".equalsIgnoreCase(pStatus) ? "selected" : "" %>>Draft (Hidden / Inactive)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Upload Main Product Photo</label>
+                                        <input type="file" name="imageFile" accept="image/*" style="padding:8px 12px; background:transparent; border:1px dashed var(--border-color); cursor:pointer; width:100%;">
+                                        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Optional. Overrides the text path field below.</div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Image Resource Path</label>
+                                        <input type="text" name="imageUrl" value="<%= pImg %>" required style="width:100%;">
+                                    </div>
+
+                                    <!-- SEO Sub-section -->
+                                    <h4 style="font-size:1.05rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:5px; margin-top:30px; margin-bottom:15px; font-family:'Playfair Display', serif;">Search Engine Optimization (SEO)</h4>
+                                    
+                                    <div class="form-group">
+                                        <label>Meta Title</label>
+                                        <input type="text" name="meta_title" value="<%= pMetaTitle != null ? pMetaTitle : "" %>" placeholder="LuxeGlow Glow Moisturizer - Premium Hydration" style="width:100%;">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Meta Description</label>
+                                        <textarea name="meta_description" rows="2" placeholder="Describe this page for search results..." style="width:100%; resize:vertical;"><%= pMetaDesc != null ? pMetaDesc : "" %></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Meta Keywords</label>
+                                        <input type="text" name="meta_keywords" value="<%= pMetaKeywords != null ? pMetaKeywords : "" %>" placeholder="moisturizer, hydration, clean beauty" style="width:100%;">
+                                    </div>
+
+                                    <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:20px; font-weight:600;">
+                                        Save All Specifications
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Gallery, Variants, Promotions, Reviews -->
+                        <div style="display:flex; flex-direction:column; gap:25px;">
+                            
+                            <!-- Gallery Management Card -->
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux);">
+                                <h3 style="font-size:1.2rem; border:none; margin-top:0; margin-bottom:10px; color:var(--burgundy); font-family:'Playfair Display', serif;">Cosmetic Gallery Assets</h3>
+                                <p style="color:var(--text-muted); font-size:0.75rem; margin-bottom:15px;">Drag & drop to sort. Use "Set Main" to choose the default thumbnail.</p>
+                                
+                                <form action="AdminServlet" method="POST" enctype="multipart/form-data" style="background:rgba(0,0,0,0.01); border:1px solid var(--border-light); padding:15px; border-radius:12px; margin-bottom:20px;">
+                                    <input type="hidden" name="action" value="uploadProductImages">
+                                    <input type="hidden" name="productId" value="<%= prodId %>">
+                                    <input type="hidden" name="redirectTab" value="product-details">
+                                    
+                                    <div class="form-group" style="margin-bottom:10px;">
+                                        <label style="font-size:0.75rem; font-weight:600;">Upload New Photos</label>
+                                        <input type="file" name="productImages" accept="image/*" multiple required style="padding:5px; border:1px dashed var(--border-color); width:100%;">
+                                    </div>
+
+                                    <button type="submit" class="btn-gold" style="width:100%; padding:8px; font-size:0.8rem; border-radius:8px;">
+                                        <i class="fas fa-upload" style="margin-right:5px;"></i> Upload to Gallery
+                                    </button>
+                                </form>
+
+                                <div id="detailGalleryImagesList" style="max-height: 300px; overflow-y: auto; display:flex; flex-direction:column; gap:10px;">
+                                    <!-- Populated dynamically via script on load -->
+                                </div>
+                            </div>
+
+                            <!-- Variants Configuration Card -->
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                    <h3 style="font-size:1.2rem; border:none; margin:0; color:var(--burgundy); font-family:'Playfair Display', serif;">Product Variants</h3>
+                                    <button class="btn-gold" style="padding:6px 12px; font-size:0.75rem; border-radius:6px; text-transform:none;" onclick="openAddVariantModal(<%= prodId %>, '<%= pName.replace("'", "\\'") %>')">
+                                        <i class="fas fa-plus-circle"></i> Add Shade / Size
+                                    </button>
+                                </div>
+
+                                <table class="variants-sub-table" style="width:100%; border-collapse:collapse; background:var(--bg-card); border-radius:10px; overflow:hidden; border:1px solid var(--border-light);">
+                                    <thead>
+                                        <tr>
+                                            <th>Shade/Name</th>
+                                            <th>Color/Code</th>
+                                            <th>Stock</th>
+                                            <th>Price Override</th>
+                                            <th style="text-align:right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <%
+                                            try (Connection con = DBConnection.getConnection();
+                                                 PreparedStatement psVars = con.prepareStatement(
+                                                     "SELECT id, variant_name, color_code, stock, price FROM product_variants WHERE product_id = ? ORDER BY id ASC")) {
+                                                psVars.setInt(1, prodId);
+                                                try (ResultSet rsVars = psVars.executeQuery()) {
+                                                    boolean hasVars = false;
+                                                    while (rsVars.next()) {
+                                                        hasVars = true;
+                                                        int vId = rsVars.getInt("id");
+                                                        String vName = rsVars.getString("variant_name");
+                                                        String vColor = rsVars.getString("color_code");
+                                                        int vStock = rsVars.getInt("stock");
+                                                        double vPrice = rsVars.getDouble("price");
+                                                        boolean hasOverride = !rsVars.wasNull();
+                                        %>
+                                        <tr style="border-bottom:1px solid rgba(0,0,0,0.03);">
+                                            <td style="font-weight:600; color:var(--text-primary);"><%= vName %></td>
+                                            <td>
+                                                <% if (vColor.startsWith("#")) { %>
+                                                    <span class="variant-color-indicator" style="background-color:<%= vColor %>;"></span>
+                                                <% } %>
+                                                <code><%= vColor %></code>
+                                            </td>
+                                            <td style="font-weight:600; color:<%= vStock < 5 ? "var(--danger)" : "var(--text-secondary)" %>"><%= vStock %> units</td>
+                                            <td><%= hasOverride ? "₹" + String.format("%.2f", vPrice) : "<span style='color:var(--text-muted); font-size:0.7rem;'>Inherit</span>" %></td>
+                                            <td style="text-align:right;">
+                                                <button class="btn-outline" style="padding:4px 8px; font-size:0.65rem; border-radius:4px; text-transform:none; margin-right:4px;" 
+                                                        onclick="openEditVariantModal(<%= vId %>, <%= prodId %>, '<%= vName.replace("'", "\\'") %>', '<%= vColor.replace("'", "\\'") %>', <%= vStock %>, '<%= hasOverride ? vPrice : "" %>')">
+                                                    Edit
+                                                </button>
+                                                <form action="AdminServlet" method="POST" style="display:inline-block;" onsubmit="return confirm('Delete variant <%= vName %>?');">
+                                                    <input type="hidden" name="action" value="deleteVariant">
+                                                    <input type="hidden" name="variantId" value="<%= vId %>">
+                                                    <input type="hidden" name="redirectTab" value="product-details">
+                                                    <button type="submit" class="btn-outline" style="padding:4px 8px; font-size:0.65rem; border-radius:4px; color:var(--danger); border-color:var(--danger); background:transparent; text-transform:none;">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <%
+                                                    }
+                                                    if (!hasVars) {
+                                        %>
+                                        <tr>
+                                            <td colspan="5" style="text-align:center; padding:12px; color:var(--text-muted); font-size:0.75rem;">No variants configured.</td>
+                                        </tr>
+                                        <%
+                                                    }
+                                                }
+                                            } catch (Exception ex) {
+                                                out.println("<tr><td colspan='5'>Error: " + ex.getMessage() + "</td></tr>");
+                                            }
+                                        %>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Product Promotions Card -->
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux);">
+                                <h3 style="font-size:1.2rem; border:none; margin-top:0; margin-bottom:15px; color:var(--burgundy); font-family:'Playfair Display', serif;">Associated Discounts</h3>
+                                <div style="display:flex; flex-direction:column; gap:10px;">
+                                    <%
+                                        try (Connection con = DBConnection.getConnection();
+                                             PreparedStatement psProms = con.prepareStatement(
+                                                 "SELECT * FROM promotions WHERE is_active = 1 " +
+                                                 "AND (target_type = 'SITEWIDE' " +
+                                                 "OR (target_type = 'PRODUCT' AND target_value = ?) " +
+                                                 "OR (target_type = 'CATEGORY' AND target_value = ?) " +
+                                                 "OR (target_type = 'BRAND' AND target_value = ?))")) {
+                                            psProms.setString(1, String.valueOf(prodId));
+                                            psProms.setString(2, pCat);
+                                            psProms.setString(3, pBrand);
+                                            try (ResultSet rsProms = psProms.executeQuery()) {
+                                                boolean hasProms = false;
+                                                while (rsProms.next()) {
+                                                    hasProms = true;
+                                                    String name = rsProms.getString("name");
+                                                    String discType = rsProms.getString("discount_type");
+                                                    double discAmt = rsProms.getDouble("discount_amount");
+                                                    String target = rsProms.getString("target_type");
+                                                    String val = rsProms.getString("target_value");
+                                    %>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(197,171,87,0.03); border:1px solid var(--border-light); padding:10px 15px; border-radius:12px;">
+                                        <div>
+                                            <div style="font-weight:600; font-size:0.85rem;"><%= name %></div>
+                                            <div style="font-size:0.7rem; color:var(--text-muted);">
+                                                Target: <%= target %><%= (val != null && !val.isEmpty()) ? " (" + val + ")" : "" %>
+                                            </div>
+                                        </div>
+                                        <div style="font-weight:700; color:var(--burgundy); font-size:0.9rem;">
+                                            <%= "PERCENTAGE".equalsIgnoreCase(discType) ? (int)discAmt + "% OFF" : "₹" + String.format("%.2f", discAmt) + " OFF" %>
+                                        </div>
+                                    </div>
+                                    <%
+                                                }
+                                                if (!hasProms) {
+                                    %>
+                                    <div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:10px;">No promotions active for this item.</div>
+                                    <%
+                                                }
+                                            }
+                                        } catch (Exception ex) {
+                                            out.println("<p style='color:var(--danger);'>Error: " + ex.getMessage() + "</p>");
+                                        }
+                                    %>
+                                </div>
+                            </div>
+
+                            <!-- Product Reviews Card -->
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux);">
+                                <h3 style="font-size:1.2rem; border:none; margin-top:0; margin-bottom:15px; color:var(--burgundy); font-family:'Playfair Display', serif;">Product Reviews Moderation</h3>
+                                <div style="display:flex; flex-direction:column; gap:12px; max-height:350px; overflow-y:auto; padding-right:5px;">
+                                    <%
+                                        try (Connection con = DBConnection.getConnection();
+                                             PreparedStatement psRev = con.prepareStatement(
+                                                 "SELECT r.id, r.fullname, r.rating, r.comment, r.created_at, r.is_hidden " +
+                                                 "FROM reviews r WHERE r.product_id = ? ORDER BY r.created_at DESC")) {
+                                            psRev.setInt(1, prodId);
+                                            try (ResultSet rsRev = psRev.executeQuery()) {
+                                                boolean hasReviews = false;
+                                                while (rsRev.next()) {
+                                                    hasReviews = true;
+                                                    int rId = rsRev.getInt("id");
+                                                    String rName = rsRev.getString("fullname");
+                                                    int rRating = rsRev.getInt("rating");
+                                                    String rComment = rsRev.getString("comment");
+                                                    Timestamp rDate = rsRev.getTimestamp("created_at");
+                                                    int isHidden = rsRev.getInt("is_hidden");
+                                    %>
+                                    <div style="background:var(--bg-surface); border:1px solid var(--border-light); padding:12px; border-radius:12px; display:flex; flex-direction:column; gap:6px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <span style="font-weight:600; font-size:0.8rem;"><%= rName %></span>
+                                                <span style="font-size:0.7rem; color:var(--text-muted); margin-left:8px;"><%= rDate %></span>
+                                            </div>
+                                            <div style="color:var(--gold); font-size:0.75rem;">
+                                                <% for (int i = 0; i < rRating; i++) { %><i class="fas fa-star"></i><% } %>
+                                            </div>
+                                        </div>
+                                        <p style="font-size:0.75rem; margin:0; line-height:1.4; color:var(--text-secondary);"><%= rComment %></p>
+                                        <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:5px; border-top:1px solid rgba(0,0,0,0.03); padding-top:5px;">
+                                            <form action="AdminServlet" method="POST" style="margin:0;">
+                                                <input type="hidden" name="action" value="toggleReviewVisibility">
+                                                <input type="hidden" name="reviewId" value="<%= rId %>">
+                                                <input type="hidden" name="productId" value="<%= prodId %>">
+                                                <input type="hidden" name="redirectTab" value="product-details">
+                                                <button type="submit" class="btn-outline" style="padding:4px 8px; font-size:0.65rem; border-radius:4px; text-transform:none;">
+                                                    <%= isHidden == 1 ? "Unhide" : "Hide" %>
+                                                </button>
+                                            </form>
+                                            <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete review by <%= rName %>?');">
+                                                <input type="hidden" name="action" value="deleteReviewAdmin">
+                                                <input type="hidden" name="reviewId" value="<%= rId %>">
+                                                <input type="hidden" name="productId" value="<%= prodId %>">
+                                                <input type="hidden" name="redirectTab" value="product-details">
+                                                <button type="submit" class="btn-outline" style="padding:4px 8px; font-size:0.65rem; border-radius:4px; color:var(--danger); border-color:var(--danger); background:transparent; text-transform:none;">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <%
+                                                }
+                                                if (!hasReviews) {
+                                    %>
+                                    <div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:10px;">No reviews found for this cosmetic masterpiece.</div>
+                                    <%
+                                                }
+                                            }
+                                        } catch (Exception ex) {
+                                            out.println("<p style='color:var(--danger);'>Error: " + ex.getMessage() + "</p>");
+                                        }
+                                    %>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                 <% } else if ("promotions".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                         PROMOTIONS TAB
+                         ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif;">Store Promotions</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Configure sitewide, brand, category, or product-specific discounts.</p>
+                        </div>
+                        <button class="btn-gold" style="border-radius:12px; padding:10px 24px;" onclick="openAddPromoModal()">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i> Create Promotion
+                        </button>
+                    </div>
+
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Promo Name</th>
+                                <th>Type</th>
+                                <th>Discount</th>
+                                <th>Target</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                try {
+                                    Connection con = DBConnection.getConnection();
+                                    Statement st = con.createStatement();
+                                    ResultSet rs = st.executeQuery("SELECT * FROM promotions ORDER BY id DESC");
+                                    boolean hasPromos = false;
+                                    while (rs.next()) {
+                                        hasPromos = true;
+                                        int id = rs.getInt("id");
+                                        String name = rs.getString("name");
+                                        String type = rs.getString("discount_type");
+                                        double amt = rs.getDouble("discount_amount");
+                                        String target = rs.getString("target_type");
+                                        String val = rs.getString("target_value");
+                                        Timestamp start = rs.getTimestamp("start_date");
+                                        Timestamp end = rs.getTimestamp("end_date");
+                                        int active = rs.getInt("is_active");
+                            %>
+                            <tr>
+                                <td style="font-weight:600; color:var(--gold);">#<%= id %></td>
+                                <td style="font-weight:600;"><%= name %></td>
+                                <td><span style="font-size:0.75rem; text-transform:uppercase;"><%= type %></span></td>
+                                <td style="font-weight:600; color:var(--burgundy);"><%= "PERCENTAGE".equalsIgnoreCase(type) ? (int)amt + "%" : "₹" + String.format("%.2f", amt) %></td>
+                                <td>
+                                    <span style="font-size:0.75rem; font-weight:600; background:rgba(0,0,0,0.03); padding:4px 8px; border-radius:8px;">
+                                        <%= target %><%= (val != null && !val.isEmpty()) ? ": " + val : "" %>
+                                    </span>
+                                </td>
+                                <td style="font-size:0.75rem;"><%= start != null ? start.toString().substring(0, 16) : "Immediate" %></td>
+                                <td style="font-size:0.75rem;"><%= end != null ? end.toString().substring(0, 16) : "Never Expires" %></td>
+                                <td>
+                                    <span class="status-badge <%= active == 1 ? "status-completed" : "status-cancelled" %>">
+                                        <%= active == 1 ? "Active" : "Inactive" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <form action="AdminServlet" method="POST" style="display:inline-block;" onsubmit="return confirm('Delete promotion <%= name %>?');">
+                                        <input type="hidden" name="action" value="deletePromotion">
+                                        <input type="hidden" name="promotionId" value="<%= id %>">
+                                        <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent; text-transform:none;">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <%
+                                    }
+                                    if (!hasPromos) {
+                            %>
+                            <tr>
+                                <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">No promotions created yet.</td>
+                            </tr>
+                            <%
+                                    }
+                                    rs.close();
+                                    st.close();
+                                    con.close();
+                                } catch (Exception e) {
+                                    out.println("<tr><td colspan='9' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
+                                }
+                            %>
+                        </tbody>
+                    </table>
+
+                 <% } else if ("coupons".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                         COUPONS TAB
+                         ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif;">Store Coupons</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Manage client discount codes, usage limits, and expiration controls.</p>
+                        </div>
+                        <button class="btn-gold" style="border-radius:12px; padding:10px 24px;" onclick="openAddCouponModal()">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i> Create Coupon
+                        </button>
+                    </div>
+
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Coupon Code</th>
+                                <th>Type</th>
+                                <th>Discount</th>
+                                <th>Min Purchase</th>
+                                <th>Usage Limit</th>
+                                <th>Times Used</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                try {
+                                    Connection con = DBConnection.getConnection();
+                                    Statement st = con.createStatement();
+                                    ResultSet rs = st.executeQuery("SELECT * FROM coupons ORDER BY id DESC");
+                                    boolean hasCoupons = false;
+                                    while (rs.next()) {
+                                        hasCoupons = true;
+                                        int id = rs.getInt("id");
+                                        String code = rs.getString("code");
+                                        String type = rs.getString("discount_type");
+                                        double amt = rs.getDouble("discount_amount");
+                                        double min = rs.getDouble("minimum_purchase_amount");
+                                        int limit = rs.getInt("usage_limit");
+                                        boolean hasLimit = !rs.wasNull();
+                                        int count = rs.getInt("usage_count");
+                                        Timestamp expiry = rs.getTimestamp("expiry_date");
+                                        int active = rs.getInt("is_active");
+                            %>
+                            <tr>
+                                <td style="font-weight:600; color:var(--gold);">#<%= id %></td>
+                                <td style="font-weight:700; color:var(--burgundy); font-size:0.95rem; font-family:monospace;"><%= code %></td>
+                                <td><span style="font-size:0.75rem; text-transform:uppercase;"><%= type %></span></td>
+                                <td style="font-weight:600; color:var(--gold);"><%= "PERCENTAGE".equalsIgnoreCase(type) ? (int)amt + "%" : "₹" + String.format("%.2f", amt) %></td>
+                                <td>₹<%= String.format("%.2f", min) %></td>
+                                <td><%= hasLimit ? limit : "Unlimited" %></td>
+                                <td><%= count %> times</td>
+                                <td style="font-size:0.75rem;"><%= expiry != null ? expiry.toString().substring(0, 16) : "Never Expires" %></td>
+                                <td>
+                                    <form action="AdminServlet" method="POST" style="margin:0; display:inline-block;">
+                                        <input type="hidden" name="action" value="toggleCouponStatus">
+                                        <input type="hidden" name="couponId" value="<%= id %>">
+                                        <button type="submit" class="status-badge <%= active == 1 ? "status-completed" : "status-cancelled" %>" style="border:none; cursor:pointer; font-family:inherit;">
+                                            <%= active == 1 ? "Active" : "Inactive" %>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td style="text-align:right;">
+                                    <form action="AdminServlet" method="POST" style="display:inline-block;" onsubmit="return confirm('Delete coupon <%= code %>?');">
+                                        <input type="hidden" name="action" value="deleteCoupon">
+                                        <input type="hidden" name="couponId" value="<%= id %>">
+                                        <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent; text-transform:none;">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <%
+                                    }
+                                    if (!hasCoupons) {
+                            %>
+                            <tr>
+                                <td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">No coupon codes registered yet.</td>
+                            </tr>
+                            <%
+                                    }
+                                    rs.close();
+                                    st.close();
+                                    con.close();
+                                } catch (Exception e) {
+                                    out.println("<tr><td colspan='10' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
+                                }
+                            %>
+                        </tbody>
+                    </table>
+
+                 <% } else if ("reviews".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                         REVIEWS TAB
+                         ========================================== -->
+                    <div style="text-align:left; margin-bottom:25px;">
+                        <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif;">Reviews Moderation</h2>
+                        <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Audit client product experiences, filter feedback, or moderate visibility.</p>
+                    </div>
+
+                    <!-- Search Bar for Reviews -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:25px; flex-wrap:wrap;">
+                        <div class="search-input-wrapper" style="max-width:350px; text-align:left; margin-bottom:0; width:100%;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="reviewSearch" onkeyup="searchReviews()" placeholder="Search reviews by customer name, product, or comment...">
+                        </div>
+                        <div>
+                            <select id="reviewFilter" onchange="filterReviews()" style="padding:10px 20px; border-radius:12px; background:var(--bg-card); font-size:0.85rem; min-width:180px; border:1px solid var(--border-color); color:var(--text-primary);">
+                                <option value="ALL">All Visibility</option>
+                                <option value="VISIBLE">Visible Reviews Only</option>
+                                <option value="HIDDEN">Hidden Reviews Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <table class="admin-table" id="reviewsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Product</th>
+                                <th>Customer</th>
+                                <th>Stars</th>
+                                <th style="width:35%;">Comment</th>
+                                <th>Submitted</th>
+                                <th>Visibility</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                try {
+                                    Connection con = DBConnection.getConnection();
+                                    Statement st = con.createStatement();
+                                    ResultSet rs = st.executeQuery(
+                                        "SELECT r.id, r.product_id, r.fullname, r.rating, r.comment, r.created_at, r.is_hidden, p.name AS product_name " +
+                                        "FROM reviews r JOIN products p ON r.product_id = p.id ORDER BY r.created_at DESC"
+                                    );
+                                    boolean hasReviews = false;
+                                    while (rs.next()) {
+                                        hasReviews = true;
+                                        int id = rs.getInt("id");
+                                        int pId = rs.getInt("product_id");
+                                        String pName2 = rs.getString("product_name");
+                                        String rName = rs.getString("fullname");
+                                        int rRating = rs.getInt("rating");
+                                        String rComment = rs.getString("comment");
+                                        Timestamp rDate = rs.getTimestamp("created_at");
+                                        int isHidden = rs.getInt("is_hidden");
+                            %>
+                            <tr class="review-row" data-hidden="<%= isHidden %>">
+                                <td style="font-weight:600; color:var(--gold);">#<%= id %></td>
+                                <td style="font-weight:600;"><a href="admin?tab=product-details&id=<%= pId %>" style="color:inherit;"><%= pName2 %></a></td>
+                                <td class="rev-customer" style="font-weight:600;"><%= rName %></td>
+                                <td style="color:var(--gold); font-size:0.8rem; white-space:nowrap;">
+                                    <% for (int i = 0; i < rRating; i++) { %><i class="fas fa-star"></i><% } %>
+                                </td>
+                                <td class="rev-comment" style="font-size:0.8rem; line-height:1.4;"><%= rComment %></td>
+                                <td style="font-size:0.75rem;"><%= rDate %></td>
+                                <td>
+                                    <span class="status-badge <%= isHidden == 1 ? "status-cancelled" : "status-completed" %>">
+                                        <%= isHidden == 1 ? "Hidden" : "Visible" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                        <form action="AdminServlet" method="POST" style="margin:0;">
+                                            <input type="hidden" name="action" value="toggleReviewVisibility">
+                                            <input type="hidden" name="reviewId" value="<%= id %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; text-transform:none;">
+                                                <%= isHidden == 1 ? "Unhide" : "Hide" %>
+                                            </button>
+                                        </form>
+                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete review by <%= rName %>?');">
+                                            <input type="hidden" name="action" value="deleteReviewAdmin">
+                                            <input type="hidden" name="reviewId" value="<%= id %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent; text-transform:none;">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <%
+                                    }
+                                    if (!hasReviews) {
+                            %>
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No reviews written yet.</td>
+                            </tr>
+                            <%
+                                    }
+                                    rs.close();
+                                    st.close();
+                                    con.close();
+                                } catch (Exception e) {
+                                    out.println("<tr><td colspan='8' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
+                                }
+                            %>
+                        </tbody>
+                    </table>
+
+                 <% } %>
 
             </main>
         </div>
 
-    </div>
 
     <!-- ==========================================
          MODAL 1: ADD PRODUCT
@@ -1276,6 +2064,142 @@
         </div>
     </div>
 
+    <!-- ==================================================
+         MODAL 7: ADD PROMOTION (NEW)
+         ================================================== -->
+    <div id="addPromotionModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeAddPromoModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Create New Promotion
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="addPromotion">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Promotion Campaign Name</label>
+                    <input type="text" name="name" placeholder="E.g. Summer Glow Fest" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Discount Type</label>
+                        <select name="discountType" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="PERCENTAGE">Percentage (%)</option>
+                            <option value="FIXED">Fixed Amount (₹)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Discount Value</label>
+                        <input type="number" step="0.01" name="discountAmount" placeholder="E.g. 15.00" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Target Scope</label>
+                        <select name="targetType" id="promoTargetType" onchange="togglePromoTargetValue()" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="SITEWIDE">Sitewide</option>
+                            <option value="PRODUCT">Specific Product ID</option>
+                            <option value="CATEGORY">Specific Category</option>
+                            <option value="BRAND">Specific Brand</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Target Value</label>
+                        <input type="text" name="targetValue" id="promoTargetValue" placeholder="Leave empty for Sitewide" disabled style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Start Date</label>
+                        <input type="datetime-local" name="startDate" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">End Date</label>
+                        <input type="datetime-local" name="endDate" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                    <select name="isActive" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:10px;">
+                    Create Promotion
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================================================
+         MODAL 8: ADD COUPON (NEW)
+         ================================================== -->
+    <div id="addCouponModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeAddCouponModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Create Store Coupon Code
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="addCoupon">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Coupon Code</label>
+                    <input type="text" name="code" placeholder="E.g. GLOW20" required style="text-transform: uppercase; width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Discount Type</label>
+                        <select name="discountType" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="PERCENTAGE">Percentage (%)</option>
+                            <option value="FIXED">Fixed Amount (₹)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Discount Value</label>
+                        <input type="number" step="0.01" name="discountAmount" placeholder="E.g. 20.00" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Minimum Purchase (₹)</label>
+                        <input type="number" step="0.01" name="minimumPurchase" value="0.00" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Usage Limit (Total)</label>
+                        <input type="number" name="usageLimit" placeholder="Blank for unlimited" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Expiration Date</label>
+                        <input type="datetime-local" name="expiryDate" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isActive" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:10px;">
+                    Create Coupon Code
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Footer -->
     <%@ include file="../footer.jsp" %>
 
@@ -1349,21 +2273,9 @@
         }
 
         function fetchGalleryImages(productId) {
-            const listEl = document.getElementById('galleryImagesList');
+            const listEl = document.getElementById('galleryImagesList') || document.getElementById('detailGalleryImagesList');
+            if (!listEl) return;
             listEl.innerHTML = '<p style="color:var(--text-muted); text-align:center; font-size:0.85rem;">Loading gallery assets...</p>';
-            
-            // Build temporary query elements using simple servlet or query products
-            // To make it simple, we can call a lightweight custom AJAX query or pass them in a JSON payload.
-            // Let's execute a fetch request to a custom helper or load them.
-            // Wait, we can fetch all product images by implementing a simple helper block.
-            // Since we need to query product_images, we can call fetch('admin?action=getGallery&productId=' + productId)
-            // But instead of complex APIs, we can create a lightweight servlet handler or fetch it from a simple backend call!
-            // Let's implement an action `getGallery` in AdminServlet that returns JSON!
-            // Let's write a simple servlet API in AdminDashboardServlet, or call a direct query.
-            // Wait! Can we call a JSP that prints a clean HTML fragment of images?
-            // Yes! We can create a simple file `getGalleryImages.jsp` in webapp that takes `productId` and prints the images!
-            // That is incredibly easy, J2EE-native, requires no servlet rebuild, and loads instantly.
-            // Let's do that! That is extremely clever.
             fetch('getGalleryImages.jsp?productId=' + productId)
                 .then(res => res.text())
                 .then(html => {
@@ -1383,13 +2295,138 @@
             const addVarM = document.getElementById('addVariantModal');
             const editVarM = document.getElementById('editVariantModal');
             const galleryM = document.getElementById('manageGalleryModal');
+            const addPromoM = document.getElementById('addPromotionModal');
+            const addCouponM = document.getElementById('addCouponModal');
             if (event.target == addM) addM.style.display = 'none';
             if (event.target == editM) editM.style.display = 'none';
             if (event.target == detailsM) detailsM.style.display = 'none';
             if (event.target == addVarM) addVarM.style.display = 'none';
             if (event.target == editVarM) editVarM.style.display = 'none';
             if (event.target == galleryM) galleryM.style.display = 'none';
+            if (event.target == addPromoM) addPromoM.style.display = 'none';
+            if (event.target == addCouponM) addCouponM.style.display = 'none';
         }
+
+        // --- NEW MODAL ACTIONS ---
+        function openAddPromoModal() {
+            document.getElementById('addPromotionModal').style.display = 'flex';
+        }
+        function closeAddPromoModal() {
+            document.getElementById('addPromotionModal').style.display = 'none';
+        }
+        function openAddCouponModal() {
+            document.getElementById('addCouponModal').style.display = 'flex';
+        }
+        function closeAddCouponModal() {
+            document.getElementById('addCouponModal').style.display = 'none';
+        }
+        function togglePromoTargetValue() {
+            const scope = document.getElementById('promoTargetType').value;
+            const input = document.getElementById('promoTargetValue');
+            if (scope === 'SITEWIDE') {
+                input.value = '';
+                input.placeholder = 'Leave empty for Sitewide';
+                input.disabled = true;
+            } else if (scope === 'PRODUCT') {
+                input.placeholder = 'Enter Product ID (e.g. 15)';
+                input.disabled = false;
+            } else if (scope === 'CATEGORY') {
+                input.placeholder = 'Enter Category (e.g. Skincare)';
+                input.disabled = false;
+            } else if (scope === 'BRAND') {
+                input.placeholder = 'Enter Brand Name (e.g. LuxeGlow)';
+                input.disabled = false;
+            }
+        }
+
+        // --- NEW FILTER CONTROLLERS ---
+        function filterCatalog() {
+            const search = document.getElementById('catalogSearch').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+            const stockLevel = document.getElementById('stockFilter').value;
+            const onSale = document.getElementById('onSaleFilter').value;
+            
+            const rows = document.querySelectorAll('.product-row');
+            rows.forEach(row => {
+                const name = row.getAttribute('data-name') || '';
+                const sku = row.getAttribute('data-sku') || '';
+                const brand = row.getAttribute('data-brand') || '';
+                const cat = row.getAttribute('data-category') || '';
+                const stat = row.getAttribute('data-status') || '';
+                const stock = parseInt(row.getAttribute('data-stock') || '0', 10);
+                const sale = row.getAttribute('data-onsale') === 'true';
+                
+                const matchesSearch = name.includes(search) || sku.includes(search) || brand.includes(search);
+                const matchesCategory = category === 'all' || cat === category;
+                const matchesStatus = status === 'ALL' || stat === status;
+                
+                let matchesStock = true;
+                if (stockLevel === 'LOW') {
+                    matchesStock = stock < 10;
+                } else if (stockLevel === 'OUT') {
+                    matchesStock = stock === 0;
+                }
+                
+                let matchesSale = true;
+                if (onSale === 'SALE') {
+                    matchesSale = sale;
+                } else if (onSale === 'NORMAL') {
+                    matchesSale = !sale;
+                }
+                
+                const nextRow = row.nextElementSibling;
+                if (matchesSearch && matchesCategory && matchesStatus && matchesStock && matchesSale) {
+                    row.style.display = '';
+                    if (nextRow && nextRow.classList.contains('variants-row')) {
+                        nextRow.style.display = '';
+                    }
+                } else {
+                    row.style.display = 'none';
+                    if (nextRow && nextRow.classList.contains('variants-row')) {
+                        nextRow.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function searchReviews() {
+            const input = document.getElementById('reviewSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('.review-row');
+            rows.forEach(row => {
+                const customer = row.querySelector('.rev-customer').textContent.toLowerCase();
+                const comment = row.querySelector('.rev-comment').textContent.toLowerCase();
+                if (customer.includes(input) || comment.includes(input)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        function filterReviews() {
+            const filter = document.getElementById('reviewFilter').value;
+            const rows = document.querySelectorAll('.review-row');
+            rows.forEach(row => {
+                const isHidden = row.getAttribute('data-hidden') === '1';
+                if (filter === 'ALL') {
+                    row.style.display = '';
+                } else if (filter === 'VISIBLE' && !isHidden) {
+                    row.style.display = '';
+                } else if (filter === 'HIDDEN' && isHidden) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // On Load Trigger
+        document.addEventListener('DOMContentLoaded', () => {
+            <% if ("product-details".equalsIgnoreCase(activeTab) && prodId > 0) { %>
+                fetchGalleryImages(<%= prodId %>);
+            <% } %>
+        });
 
         // Search inputs filtering functions
         function searchCatalog() {

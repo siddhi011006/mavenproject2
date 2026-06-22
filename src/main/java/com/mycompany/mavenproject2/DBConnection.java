@@ -20,6 +20,8 @@ public class DBConnection {
             System.err.println("MySQL Driver not found: " + e.getMessage());
             e.printStackTrace();
         }
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        Connection con = DriverManager.getConnection(URL, USER, PASSWORD);
+        SchemaInitializer.initializeSchema(con);
+        return con;
     }
 }

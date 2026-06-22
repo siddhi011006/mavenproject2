@@ -51,6 +51,7 @@ public class CheckoutServlet extends HttpServlet {
 
             // 1. Fetch user's cart items, joining variants if present
             String cartSql = "SELECT c.product_id, c.variant_id, c.quantity, "
+                           + "p.category, p.brand, "
                            + "COALESCE(pv.price, p.price) AS price, "
                            + "COALESCE(pv.stock, p.stock) AS stock, "
                            + "IF(pv.id IS NOT NULL, CONCAT(p.name, ' - ', pv.variant_name), p.name) AS name "
@@ -79,6 +80,11 @@ public class CheckoutServlet extends HttpServlet {
                 double price = rs.getDouble("price");
                 int stock = rs.getInt("stock");
                 String name = rs.getString("name");
+                String category = rs.getString("category");
+                String brand = rs.getString("brand");
+
+                // Live promotion discount
+                double finalUnitPrice = PromotionHelper.getDiscountedPrice(prodId, category, brand, price);
 
                 if (qty > stock) {
                     con.rollback();
@@ -88,8 +94,8 @@ public class CheckoutServlet extends HttpServlet {
                     return;
                 }
 
-                subtotal += price * qty;
-                itemsToOrder.add(new CartItemTemp(prodId, variantId, qty, price, name));
+                subtotal += finalUnitPrice * qty;
+                itemsToOrder.add(new CartItemTemp(prodId, variantId, qty, finalUnitPrice, name));
             }
 
             if (!hasItems) {
@@ -99,12 +105,29 @@ public class CheckoutServlet extends HttpServlet {
                 return;
             }
 
-            // Calculate discount, shipping, tax, and total
-            double discount = 0.0;
-            if ("GLOW15".equalsIgnoreCase(couponCode)) {
-                discount = 0.15;
+            // Calculate dynamic coupon discount, shipping, tax, and total
+            double couponDiscount = 0.0;
+            if (couponCode != null && !couponCode.trim().isEmpty()) {
+                CouponHelper.CouponResult couponRes = CouponHelper.validateCoupon(couponCode, subtotal);
+                if (couponRes.valid) {
+                    if ("PERCENTAGE".equalsIgnoreCase(couponRes.discountType)) {
+                        couponDiscount = subtotal * (couponRes.discountAmount / 100.0);
+                    } else if ("FIXED".equalsIgnoreCase(couponRes.discountType)) {
+                        couponDiscount = couponRes.discountAmount;
+                    }
+                } else {
+                    con.rollback();
+                    request.setAttribute("error", "Coupon Error: " + couponRes.errorMsg);
+                    request.getRequestDispatcher("checkout.jsp").forward(request, response);
+                    con.close();
+                    return;
+                }
             }
-            double discountedSubtotal = subtotal * (1 - discount);
+            
+            double discountedSubtotal = subtotal - couponDiscount;
+            if (discountedSubtotal < 0) {
+                discountedSubtotal = 0;
+            }
             double shipping = (discountedSubtotal >= 1500.0) ? 0.0 : 9.99;
             double tax = discountedSubtotal * 0.08;
             double finalTotal = discountedSubtotal + tax + shipping;
@@ -171,6 +194,11 @@ public class CheckoutServlet extends HttpServlet {
             clearPs.setInt(1, userId);
             clearPs.executeUpdate();
 
+            // Increment coupon usage count
+            if (couponCode != null && !couponCode.trim().isEmpty()) {
+                CouponHelper.incrementUsage(couponCode);
+            }
+
             // Commit transaction
             con.commit();
             con.close();
@@ -191,7 +219,7 @@ public class CheckoutServlet extends HttpServlet {
                 
                 String orderDateStr = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"));
                 String estDeliveryStr = java.time.LocalDate.now().plusDays(5).format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy"));
-                double discountAmount = subtotal * discount;
+                double discountAmount = couponDiscount;
 
                 EmailUtility.sendOrderConfirmationEmail(
                     customerEmail, customerName, orderId, orderDateStr,
@@ -218,6 +246,36 @@ public class CheckoutServlet extends HttpServlet {
             request.setAttribute("error", "Checkout transaction failed: " + e.getMessage());
             request.getRequestDispatcher("checkout.jsp").forward(request, response);
         }
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        
+        String couponCode = request.getParameter("couponCode");
+        String subtotalStr = request.getParameter("subtotal");
+        double subtotal = 0.0;
+        try {
+            if (subtotalStr != null) {
+                subtotal = Double.parseDouble(subtotalStr);
+            }
+        } catch (NumberFormatException e) {
+            // default to 0.0
+        }
+        
+        CouponHelper.CouponResult result = CouponHelper.validateCoupon(couponCode, subtotal);
+        
+        StringBuilder json = new StringBuilder();
+        json.append("{");
+        json.append("\"valid\":").append(result.valid).append(",");
+        json.append("\"errorMsg\":\"").append(result.errorMsg != null ? result.errorMsg.replace("\"", "\\\"") : "").append("\",");
+        json.append("\"discountType\":").append(result.discountType != null ? "\"" + result.discountType + "\"" : "null").append(",");
+        json.append("\"discountAmount\":").append(result.discountAmount);
+        json.append("}");
+        
+        response.getWriter().write(json.toString());
     }
 
     // Helper class

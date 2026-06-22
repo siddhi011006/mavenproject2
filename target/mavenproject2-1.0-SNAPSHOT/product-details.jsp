@@ -304,6 +304,26 @@
     <!-- Page Content -->
     <div class="page-container" style="padding: 60px 8%; max-width: 1200px; margin: 0 auto;">
         
+        <% if ("ADMIN".equalsIgnoreCase(navRole)) { %>
+            <div class="admin-quick-actions-bar" style="background: var(--bg-card); border: 1px solid var(--gold); border-radius: 16px; padding: 15px 25px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-lux);">
+                <div style="text-align: left;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 2px;">Administrator Actions</span>
+                    <strong style="font-size: 0.95rem; color: var(--burgundy); font-family: 'Playfair Display', serif;"><%= name %> Management Workspace</strong>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <a href="admin?tab=product-details&id=<%= productId %>" class="btn-gold" style="border-radius: 8px; padding: 8px 16px; font-size: 0.8rem; text-decoration: none; display: inline-block; font-weight:600; margin:0;">
+                        <i class="fas fa-edit" style="margin-right: 5px;"></i> Edit Specs &amp; SEO
+                    </a>
+                    <a href="admin?tab=product-details&id=<%= productId %>" class="btn-outline" style="border-radius: 8px; padding: 7px 15px; font-size: 0.8rem; text-decoration: none; display: inline-block; font-weight:600; margin:0;">
+                        <i class="fas fa-percentage" style="margin-right: 5px;"></i> Edit Promotions
+                    </a>
+                    <a href="admin?tab=product-details&id=<%= productId %>" class="btn-outline" style="border-radius: 8px; padding: 7px 15px; font-size: 0.8rem; text-decoration: none; display: inline-block; font-weight:600; margin:0;">
+                        <i class="fas fa-tags" style="margin-right: 5px;"></i> Edit Variants
+                    </a>
+                </div>
+            </div>
+        <% } %>
+        
         <!-- Action Alerts -->
         <%
             String detailError = request.getParameter("error");
@@ -555,7 +575,7 @@
                 try {
                     conRev = DBConnection.getConnection();
                     String revSql = "SELECT r.id, r.user_id, r.rating, r.review_text, r.created_at, u.fullname FROM reviews r "
-                                  + "JOIN users u ON r.user_id = u.id WHERE r.product_id = ? ORDER BY r.created_at DESC";
+                                  + "JOIN users u ON r.user_id = u.id WHERE r.product_id = ? AND r.is_hidden = 0 ORDER BY r.created_at DESC";
                     psRev = conRev.prepareStatement(revSql);
                     psRev.setInt(1, productId);
                     rsRev = psRev.executeQuery();
@@ -678,6 +698,7 @@
     <script>
         // JS variables containing dynamic variant and image datasets
         const defaultProductImage = "<%= imageUrl %>";
+        const urlVariantId = <%= (request.getParameter("variantId") != null && !request.getParameter("variantId").trim().isEmpty()) ? request.getParameter("variantId").trim() : "null" %>;
         const parentPrice = <%= price %>;
         
         const productVariants = [
@@ -731,9 +752,20 @@
         // Initialize selectors and gallery on load
         document.addEventListener('DOMContentLoaded', () => {
             renderVariants();
-            // Automatically select first variant
-            if (productVariants.length > 0) {
-                selectVariant(productVariants[0].id, productVariants[0].colorCode);
+            
+            // Try to find variant matching urlVariantId
+            let defaultVar = null;
+            if (urlVariantId !== null) {
+                defaultVar = productVariants.find(v => v.id === urlVariantId);
+            }
+            
+            // Fallback to first variant if not found
+            if (!defaultVar && productVariants.length > 0) {
+                defaultVar = productVariants[0];
+            }
+            
+            if (defaultVar) {
+                selectVariant(defaultVar.id, defaultVar.colorCode);
             }
         });
 

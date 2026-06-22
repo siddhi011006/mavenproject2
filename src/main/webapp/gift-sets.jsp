@@ -202,8 +202,8 @@
                 
                 try {
                     con = DBConnection.getConnection();
-                    // Select items with price >= 30.00 as our curated luxury gift sets / high-end formulations
-                    String sql = "SELECT id, name, description, price, category, image_url, rating FROM products WHERE price >= 30.00 ORDER BY price DESC";
+                    // Select items (ACTIVE only) with price >= 30.00 as our curated luxury gift sets
+                    String sql = "SELECT id, name, description, price, category, rating FROM products WHERE price >= 30.00 AND status = 'ACTIVE' ORDER BY price DESC";
                     ps = con.prepareStatement(sql);
                     rs = ps.executeQuery();
                     
@@ -213,7 +213,7 @@
                         String name = rs.getString("name");
                         double price = rs.getDouble("price");
                         String category = rs.getString("category");
-                        String imageUrl = rs.getString("image_url");
+                        String imageUrl = com.mycompany.mavenproject2.ProductImageHelper.getProductImage(id);
                         int rating = rs.getInt("rating");
             %>
             <div class="card">
