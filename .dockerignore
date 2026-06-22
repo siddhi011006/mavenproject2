@@ -1,0 +1,23 @@
+# Ignore build artifacts
+target/
+*.war
+
+# Ignore Git directory
+.git/
+.gitignore
+
+# Ignore IDE files and configuration
+.idea/
+.vscode/
+*.iml
+nb-configuration.xml
+nbactions.xml
+.antigravityignore
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
