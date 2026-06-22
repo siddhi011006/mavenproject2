@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuxeGlow | Premium Luxury Beauty</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="announcement-bar">
+        <p>Complimentary Standard Shipping on Orders Over $75</p>
+    </div>
+
+ 
+     
+ 
+   <nav>
+        <div class="logo">LuxeGlow</div>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="products.html">Products</a></li>
+            
+            <li><a href="cart.html" aria-label="Shopping Cart"><i class="fas fa-shopping-bag"></i><span class="cart-count">(0)</span></a></li>
+        <li><a href="contact.html">Contact</a></li> 
+        
+        <li id="loginItem">
+    <a href="Login.html" class="login-btn">Login</a>
+</li>
+        </ul>
+        
+    </nav>
+    
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Glow Like Never Before</h1>
+            <p>Luxury beauty products crafted to make you feel confident, radiant, and beautiful every day.</p>
+        </div>
+    </section>
+  
+    
+    
+    
+    
+
+    <section class="offers-section">
+        <h2>Exclusive Limited-Time Offers</h2>
+        
+        <div class="offers-container">
+            
+            <a href="offers.html" class="offer-card bundle-deal">
+                <div class="offer-overlay">
+                    <span class="badge">Best Value</span>
+                    <h3>The Glow Bundle</h3>
+                    <p>Buy 1 Get 1 50% Off on all skincare sets.</p>
+                    <span class="shop-offer-link">Claim Offer →</span>
+                </div>
+            </a>
+
+            <a href="offers.html" class="offer-card seasonal-sale">
+                <div class="offer-overlay">
+                    <span class="badge">30% OFF</span>
+                    <h3>Summer Clearance</h3>
+                    <p>Take up to 30% off selected luxury lipsticks and cosmetic lines.</p>
+                    <span class="shop-offer-link">Shop Sale →</span>
+                </div>
+            </a>
+
+            <a href="offers.html" class="offer-card gift-deal">
+                <div class="offer-overlay">
+                    <span class="badge">Free Gift</span>
+                    <h3>Deluxe Minis</h3>
+                    <p>Receive a free luxury travel serum with any purchase over $60.</p>
+                    <span class="shop-offer-link">View Details →</span>
+                </div>
+            </a>
+
+        </div>
+    </section>
+    
+      <section class="categories-section">
+    <section class="categories-section">
+
+    <h2>Shop By Category</h2>
+
+    <div class="category-grid">
+
+        <div class="category-card">Makeup</div>
+        <div class="category-card">Skincare</div>
+        <div class="category-card">Hair Care</div>
+        <div class="category-card">Body Care</div>
+        <div class="category-card">Fragrance</div>
+        <div class="category-card">Tools & Brushes</div>
+
+    </div>
+
+</section>
+</section>
+
+<!-- Products Section starts below -->
+
+
+    <section class="products">
+        <h2>Featured Products</h2>
+
+        <div class="product-container">
+            <div class="card">
+                <a href="products/velvet-lipstick.html">
+                    <img src="image/velvetLipstick.jpg" alt="LuxeGlow Velvet Lipstick">
+                    <h3>Luxury Lipstick</h3>
+                </a>
+                <p class="price">$24</p>
+                <button class="add-to-cart">Add to Cart</button>
+            </div>
+
+            <div class="card">
+                <a href="products/silk-foundation.html">
+                    <img src="image/silkfoundation.jpg" alt="LuxeGlow Silk Foundation">
+                    <h3>Silk Foundation</h3>
+                </a>
+                
+                <p class="price">$39</p>
+                <button class="add-to-cart">Add to Cart</button>
+            </div>
+
+            <div class="card">
+                <a href="products/glow-serum.html">
+                    <img src="image/glowserum.jpg" alt="LuxeGlow Hydrating Glow Serum">
+                    <h3>Glow Serum</h3>
+                </a>
+                <p class="price">$49</p>
+                <button class="add-to-cart">Add to Cart</button>
+            </div>
+
+            <div class="card">
+                <a href="products/rose-perfume.html">
+                    <img src="image/roseperfume.jpg" alt="LuxeGlow Signature Rose Perfume">
+                    <h3>Rose Perfume</h3>
+                </a>
+                <p class="price">$59</p>
+                <button class="add-to-cart">Add to Cart</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <h2>Why Choose LuxeGlow?</h2>
+        <div class="feature-box">
+            <div class="feature">
+                <h3>Natural Ingredients</h3>
+                <p>Made with skin-loving, organic ingredients.</p>
+            </div>
+            <div class="feature">
+                <h3>Cruelty Free</h3>
+                <p>100% certified vegan and never tested on animals.</p>
+            </div>
+            <div class="feature">
+                <h3>Premium Quality</h3>
+                <p>Dermatologist-tested luxury for every skin type.</p>
+            </div>
+        </div>
+    </section>
+
+    
+    <footer>
+        <div class="footer-links">
+            <a href="faq.html">FAQs</a>
+            <a href="shipping.html">Shipping & Returns</a>
+            <a href="privacy.html">Privacy Policy</a>
+        </div>
+        <p>© <span id="year"></span> LuxeGlow. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

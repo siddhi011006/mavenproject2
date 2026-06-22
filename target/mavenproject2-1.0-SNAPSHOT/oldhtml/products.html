@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuxeGlow</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<link rel="stylesheet" href="products.css">
+</head>
+
+<body>
+
+    <div class="announcement-bar">
+        <p>Complimentary Standard Shipping on Orders Over $75</p>
+    </div>
+    
+<%@ include file="navbar.jsp" %>
+
+<section class="hero">
+    <h2>Luxury Beauty Collection</h2>
+    <p>Editorial elegance. Modern beauty. Soft luxury.</p>
+</section>
+
+<section class="controls">
+    <input type="text" id="searchInput" placeholder="Search products...">
+
+    <select id="sortSelect">
+        <option value="default">Sort by</option>
+        <option value="low">Price: Low to High</option>
+        <option value="high">Price: High to Low</option>
+    </select>
+</section>
+
+<div class="categories">
+    <button class="cat active" onclick="setCategory('all',event)">All</button>
+    <button class="cat" onclick="setCategory('skincare',event)">Skincare</button>
+    <button class="cat" onclick="setCategory('makeup',event)">Makeup</button>
+    <button class="cat" onclick="setCategory('fragrance',event)">Fragrance</button>
+</div>
+
+<section class="products" id="productContainer">
+
+    <div class="product-card skincare" data-name="Glow Serum" data-price="49">
+        <img src="image/glowserum.jpg">
+        <h3>Glow Serum</h3>
+        <p class="price">$49</p>
+        <div class="rating">★★★★★</div>
+        <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    <div class="product-card makeup" data-name="Velvet Lipstick" data-price="24">
+        <img src="image/velvetLipstick.jpg">
+        <h3>Velvet Lipstick</h3>
+        <p class="price">$24</p>
+        <div class="rating">★★★★☆</div>
+        <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    <div class="product-card fragrance" data-name="Rose Perfume" data-price="59">
+        <img src="image/roseperfume.jpg">
+        <h3>Rose Perfume</h3>
+        <p class="price">$59</p>
+        <div class="rating">★★★★★</div>
+        <button onclick="addToCart()">Add to Cart</button>
+        
+       
+    </div>
+    
+    <div class="product-card makeup" data-name="Silk Foundation" data-price="39">
+       <img src="image/silkfoundation.jpg" alt="">
+        <h3>Silk Foundation</h3>
+
+        <p class="price">$39</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+    
+    <div class="product-card makeup" data-name="lip gloss" data-price="18">
+       <img src="image/lipgloss.jpg" alt="">
+        <h3>Lip Gloss</h3>
+        <p class="price">$18</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+    
+    <div class="product-card skincare" data-name="face mist" data-price="22">
+       <img src="image/facemist.jpg" alt="">
+        <h3>Face Mist</h3>
+        <p class="price">$22</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+    
+    <div class="product-card skincare" data-name="hydra moisturizer" data-price="35">
+      <img src="image/hydramoist.jpg" alt="">
+        <h3>Hydra Moisturizer</h3>
+        <p class="price">$35</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+    
+    <div class="product-card skincare" data-name="Night Repair Cream" data-price="44">
+       <img src="image/nightcream.jpg" alt="">
+        <h3>Night Repair Cream</h3>
+        <p class="price">$44</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    <div class="product-card skincare" data-name="vitamin c serum" data-price="41">
+       <img src="image/vitaminserum2.jpg" alt="">
+        <h3>Vitamin C Serum</h3>
+        <p class="price">$41</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+    
+    <div class="product-card makeup" data-name="Matte Compact" data-price="27">
+       <img src="image/mcompact.png" alt="">
+        <h3>Matte Compact</h3>
+        <p class="price">$27</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+    
+    <div class="product-card makeup" data-name="Blush palette" data-price="29">
+        <img src="image/blushpalatte.jpg" alt="Blush Palette">
+       <h3>Blush Palette</h3>
+        <p class="price">$29</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    <div class="product-card makeup" data-name="Golden highlighter" data-price="25">
+        <img src="image/goldhighlighter.jpg" alt="Golden Highlighter">
+
+        <h3>Golden Highlighter</h3>
+
+        <p class="price">$25</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    <div class="product-card makeup" data-name="Eyeshadow palette" data-price="32">
+        <img src="image/eyeshadow.jpg" alt="">
+       <h3>Eyeshadow Palette</h3>
+        <p class="price">$32</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    <div class="product-card makeup" data-name="Brow definer" data-price="16">
+        <img src="image/browdef.jpg" alt="">
+<h3>Brow Definer</h3>
+
+        <p class="price">$16</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    <div class="product-card makeup" data-name="Brow definer" data-price="19">
+       <img src="image/makeupremove.jpg" alt="">>
+<h3>Makeup Remover</h3>
+        <p class="price">$19</p>
+  <button onclick="addToCart()">Add to Cart</button>
+    </div>
+
+    
+</section>
+
+<script>
+let cartCount = 0;
+let currentCategory = "all";
+
+const cards = document.querySelectorAll(".product-card");
+const searchInput = document.getElementById("searchInput");
+const sortSelect = document.getElementById("sortSelect");
+
+function addToCart(){
+    cartCount++;
+    document.getElementById("cartCount").innerText = cartCount;
+}
+
+function loginUser(){
+    document.getElementById("loginItem").style.display = "none";
+}
+
+function setCategory(cat,event){
+    currentCategory = cat;
+    document.querySelectorAll(".cat").forEach(b=>b.classList.remove("active"));
+    event.target.classList.add("active");
+    applyFilters();
+}
+
+searchInput.addEventListener("input", applyFilters);
+
+function applyFilters(){
+    const value = searchInput.value.toLowerCase();
+
+    cards.forEach(card=>{
+        const name = card.dataset.name.toLowerCase();
+
+        const matchCategory =
+            currentCategory === "all" ||
+            card.classList.contains(currentCategory);
+
+        const matchSearch = name.includes(value);
+
+        card.style.display = (matchCategory && matchSearch) ? "block" : "none";
+    });
+}
+
+sortSelect.addEventListener("change", ()=>{
+    let sorted = [...cards];
+    const container = document.getElementById("productContainer");
+
+    if(sortSelect.value === "low"){
+        sorted.sort((a,b)=>a.dataset.price-b.dataset.price);
+    } else if(sortSelect.value === "high"){
+        sorted.sort((a,b)=>b.dataset.price-a.dataset.price);
+    }
+
+    sorted.forEach(c=>container.appendChild(c));
+});
+</script>
+<footer>
+        <div class="footer-links">
+            <a href="faq.html">FAQs</a>
+            <a href="shipping.html">Shipping & Returns</a>
+            <a href="privacy.html">Privacy Policy</a>
+        </div>
+        <p>© <span id="year"></span> LuxeGlow. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+
+</body>
+</html>
