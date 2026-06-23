@@ -563,6 +563,27 @@
             }
         %>
 
+        <%
+            // Load reviews configuration properties
+            java.util.Properties reviewsProps = new java.util.Properties();
+            try {
+                String rcPath = application.getRealPath("/WEB-INF/reviews_config.properties");
+                if (rcPath != null) {
+                    java.io.File rcf = new java.io.File(rcPath);
+                    if (rcf.exists()) {
+                        try (java.io.FileInputStream fis = new java.io.FileInputStream(rcf)) {
+                            reviewsProps.load(fis);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            String reviewsEnabled = reviewsProps.getProperty("reviews.enabled", "true");
+            String reviewFooterText = reviewsProps.getProperty("reviews.footer.text", "Disclaimer: Customer reviews are individual experiences and may not reflect dermatological outcomes for all skin types.");
+            
+            if ("true".equalsIgnoreCase(reviewsEnabled)) {
+        %>
         <!-- Dynamic Reviews Section -->
         <div class="reviews-container" style="margin-top: 60px; border-top: 1px solid var(--border-light); padding-top: 40px; text-align:left;">
             <h2 style="font-size: 1.8rem; font-family:'Playfair Display', serif; color:var(--burgundy); margin-bottom: 25px; border-bottom:none;">Customer Reviews</h2>
@@ -655,6 +676,13 @@
                 <p style="color:var(--text-secondary); margin-bottom: 25px;">No reviews yet. Be the first to review this formula!</p>
             <% } %>
 
+            <!-- Review Section Footer Disclaimer -->
+            <% if (reviewFooterText != null && !reviewFooterText.trim().isEmpty()) { %>
+                <div class="review-section-footer" style="margin-top: 30px; margin-bottom: 30px; padding-top: 20px; border-top: 1px solid var(--border-light); font-size: 0.8rem; color: var(--text-muted); font-style: italic; line-height: 1.5; text-align: left;">
+                    <%= reviewFooterText %>
+                </div>
+            <% } %>
+
             <!-- Add Review Form -->
             <% if (userId != null) { %>
                 <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:24px; padding:30px; margin-top:35px; box-shadow:var(--shadow-lux);">
@@ -689,6 +717,7 @@
                 </div>
             <% } %>
         </div>
+        <% } %>
 
     </div>
 

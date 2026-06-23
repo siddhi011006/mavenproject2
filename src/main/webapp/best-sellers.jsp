@@ -203,8 +203,11 @@
                 
                 try {
                     con = DBConnection.getConnection();
-                    // Fetch top 8 highest-rated products (ACTIVE only)
-                    String sql = "SELECT id, name, description, price, category, rating FROM products WHERE status = 'ACTIVE' ORDER BY rating DESC, price DESC LIMIT 8";
+                    // Fetch products from best_sellers mapping table (ACTIVE and enabled only)
+                    String sql = "SELECT p.id, p.name, p.description, p.price, p.category, p.rating "
+                               + "FROM best_sellers bs JOIN products p ON bs.product_id = p.id "
+                               + "WHERE p.status = 'ACTIVE' AND bs.is_enabled = 1 "
+                               + "ORDER BY bs.display_order ASC, bs.product_id DESC";
                     ps = con.prepareStatement(sql);
                     rs = ps.executeQuery();
                     

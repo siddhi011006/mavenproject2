@@ -235,21 +235,38 @@
     <section class="offers-section" style="padding: 60px 8%; background: #FFFFFF; border-top: 1px solid var(--border-light);">
         <h2>Curated Masterpieces</h2>
         <div class="offers-container" style="margin-top: 40px;">
-            <a href="new-arrivals.jsp" class="offer-card" style="height: 200px; background: linear-gradient(rgba(0,0,0,0.05), rgba(92, 13, 30, 0.85)), url('image/silkfoundation.jpg') no-repeat center center/cover;">
+            <%
+                Connection conFeat = null;
+                Statement stFeat = null;
+                ResultSet rsFeat = null;
+                try {
+                    conFeat = DBConnection.getConnection();
+                    stFeat = conFeat.createStatement();
+                    rsFeat = stFeat.executeQuery("SELECT * FROM featured_masterpieces WHERE is_enabled = 1 ORDER BY display_order ASC, id ASC");
+                    while (rsFeat.next()) {
+                        String title = rsFeat.getString("title");
+                        String desc = rsFeat.getString("description");
+                        String img = rsFeat.getString("image_url");
+                        String badge = rsFeat.getString("badge");
+                        String link = rsFeat.getString("link_url");
+            %>
+            <a href="<%= link %>" class="offer-card" style="height: 200px; background: linear-gradient(rgba(0,0,0,0.05), rgba(92, 13, 30, 0.85)), url('<%= img %>') no-repeat center center/cover;">
                 <div class="offer-overlay" style="padding: 25px;">
-                    <span class="badge">Fresh Selections</span>
-                    <h3 style="font-size: 1.4rem;">New Arrivals</h3>
-                    <p style="font-size: 0.85rem; margin-bottom: 0;">Be the first to experience our latest clinical formulas &rarr;</p>
+                    <span class="badge"><%= badge %></span>
+                    <h3 style="font-size: 1.4rem;"><%= title %></h3>
+                    <p style="font-size: 0.85rem; margin-bottom: 0;"><%= desc %></p>
                 </div>
             </a>
-
-            <a href="best-sellers.jsp" class="offer-card" style="height: 200px; background: linear-gradient(rgba(0,0,0,0.05), rgba(92, 13, 30, 0.85)), url('image/velvetLipstick.jpg') no-repeat center center/cover;">
-                <div class="offer-overlay" style="padding: 25px;">
-                    <span class="badge">Dermatologist Choice</span>
-                    <h3 style="font-size: 1.4rem;">Best Sellers</h3>
-                    <p style="font-size: 0.85rem; margin-bottom: 0;">Explore our community's favorite beauty essentials &rarr;</p>
-                </div>
-            </a>
+            <%
+                    }
+                } catch (Exception e) {
+                    out.println("<p style='color:var(--danger);'>Failed to load masterpieces: " + e.getMessage() + "</p>");
+                } finally {
+                    if (rsFeat != null) try { rsFeat.close(); } catch (Exception e) {}
+                    if (stFeat != null) try { stFeat.close(); } catch (Exception e) {}
+                    if (conFeat != null) try { conFeat.close(); } catch (Exception e) {}
+                }
+            %>
         </div>
     </section>
 
@@ -257,35 +274,46 @@
     <section class="features" style="background: var(--bg-dark); border-top: 1px solid var(--border-light); padding: 80px 8%;">
         <h2>What Our Clients Say</h2>
         <div class="features-container">
+            <%
+                Connection conTest = null;
+                Statement stTest = null;
+                ResultSet rsTest = null;
+                try {
+                    conTest = DBConnection.getConnection();
+                    stTest = conTest.createStatement();
+                    rsTest = stTest.executeQuery("SELECT * FROM testimonials WHERE is_enabled = 1 ORDER BY display_order ASC, id ASC");
+                    while (rsTest.next()) {
+                        String name = rsTest.getString("client_name");
+                        String text = rsTest.getString("review_text");
+                        String img = rsTest.getString("client_image");
+                        int rating = rsTest.getInt("rating");
+            %>
             <div class="feature" style="background: var(--bg-card); text-align: left; padding: 35px; width: 320px;">
                 <div style="color: var(--gold); margin-bottom: 15px; font-size: 0.85rem;">
-                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    <% for (int i = 0; i < 5; i++) { %>
+                        <i class="<%= (i < rating) ? "fas" : "far" %> fa-star"></i>
+                    <% } %>
                 </div>
                 <p style="font-style: italic; color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
-                    "The Glow Serum is an absolute game-changer. My skin has never looked this radiant and hydrated. Truly luxury in a bottle!"
+                    <%= text %>
                 </p>
-                <div style="font-weight: 600; color: var(--burgundy); font-size: 0.85rem;">— Elena R., New York</div>
-            </div>
-
-            <div class="feature" style="background: var(--bg-card); text-align: left; padding: 35px; width: 320px;">
-                <div style="color: var(--gold); margin-bottom: 15px; font-size: 0.85rem;">
-                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <% if (img != null && !img.trim().isEmpty()) { %>
+                        <img src="<%= img %>" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color);" alt="<%= name %>">
+                    <% } %>
+                    <div style="font-weight: 600; color: var(--burgundy); font-size: 0.85rem;">— <%= name %></div>
                 </div>
-                <p style="font-style: italic; color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
-                    "I love the Velvet Lipstick. The pigmentation is incredibly rich, and it doesn't dry out my lips at all. Worth every single penny."
-                </p>
-                <div style="font-weight: 600; color: var(--burgundy); font-size: 0.85rem;">— Sophia T., Los Angeles</div>
             </div>
-
-            <div class="feature" style="background: var(--bg-card); text-align: left; padding: 35px; width: 320px;">
-                <div style="color: var(--gold); margin-bottom: 15px; font-size: 0.85rem;">
-                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                </div>
-                <p style="font-style: italic; color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
-                    "Customer service is outstanding, and standard shipping was fast and free. LuxeGlow has won a customer for life."
-                </p>
-                <div style="font-weight: 600; color: var(--burgundy); font-size: 0.85rem;">— Clara M., Chicago</div>
-            </div>
+            <%
+                    }
+                } catch (Exception e) {
+                    out.println("<p style='color:var(--danger);'>Failed to load testimonials: " + e.getMessage() + "</p>");
+                } finally {
+                    if (rsTest != null) try { rsTest.close(); } catch (Exception e) {}
+                    if (stTest != null) try { stTest.close(); } catch (Exception e) {}
+                    if (conTest != null) try { conTest.close(); } catch (Exception e) {}
+                }
+            %>
         </div>
     </section>
 

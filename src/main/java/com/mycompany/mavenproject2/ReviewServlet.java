@@ -53,6 +53,33 @@ public class ReviewServlet extends HttpServlet {
                 }
 
                 int productId = Integer.parseInt(productIdStr);
+                
+                // Check if reviews are enabled and require moderation from properties
+                boolean reviewsEnabled = true;
+                boolean requireModeration = false;
+                try {
+                    String rcPath = request.getServletContext().getRealPath("/WEB-INF/reviews_config.properties");
+                    if (rcPath != null) {
+                        java.io.File rcf = new java.io.File(rcPath);
+                        if (rcf.exists()) {
+                            java.util.Properties props = new java.util.Properties();
+                            try (java.io.FileInputStream fis = new java.io.FileInputStream(rcf)) {
+                                props.load(fis);
+                            }
+                            reviewsEnabled = !"false".equalsIgnoreCase(props.getProperty("reviews.enabled", "true"));
+                            requireModeration = "true".equalsIgnoreCase(props.getProperty("reviews.require.moderation", "false"));
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                if (!reviewsEnabled) {
+                    response.sendRedirect("product-details.jsp?id=" + productId + "&error=Reviews are currently disabled.");
+                    con.close();
+                    return;
+                }
+
                 int rating = Integer.parseInt(ratingStr);
 
                 if (rating < 1 || rating > 5) {
@@ -61,16 +88,22 @@ public class ReviewServlet extends HttpServlet {
                     return;
                 }
 
-                String sql = "INSERT INTO reviews (product_id, user_id, rating, review_text) VALUES (?, ?, ?, ?)";
+                int isHiddenVal = requireModeration ? 1 : 0;
+                String sql = "INSERT INTO reviews (product_id, user_id, rating, review_text, is_hidden) VALUES (?, ?, ?, ?, ?)";
                 PreparedStatement ps = con.prepareStatement(sql);
                 ps.setInt(1, productId);
                 ps.setInt(2, userId);
                 ps.setInt(3, rating);
                 ps.setString(4, reviewText.trim());
+                ps.setInt(5, isHiddenVal);
                 ps.executeUpdate();
                 ps.close();
 
-                response.sendRedirect("product-details.jsp?id=" + productId + "&success=Thank you! Your review has been published.");
+                if (requireModeration) {
+                    response.sendRedirect("product-details.jsp?id=" + productId + "&success=Thank you! Your review has been submitted and is awaiting administrator approval.");
+                } else {
+                    response.sendRedirect("product-details.jsp?id=" + productId + "&success=Thank you! Your review has been published.");
+                }
 
             } else if ("edit".equalsIgnoreCase(action)) {
                 String reviewIdStr = request.getParameter("reviewId");

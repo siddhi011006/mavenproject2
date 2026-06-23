@@ -52,12 +52,27 @@ public class AdminServlet extends HttpServlet {
         String action = request.getParameter("action");
         String tab = "products";
         if (action != null) {
-            if (action.toLowerCase().contains("order")) {
+            String actLower = action.toLowerCase();
+            if (actLower.contains("order")) {
                 tab = "orders";
-            } else if (action.toLowerCase().contains("user") || action.toLowerCase().contains("role")) {
+            } else if (actLower.contains("user") || actLower.contains("role")) {
                 tab = "users";
-            } else if (action.toLowerCase().contains("category")) {
+            } else if (actLower.contains("category")) {
                 tab = "categories";
+            } else if (actLower.contains("newarrival")) {
+                tab = "new-arrivals";
+            } else if (actLower.contains("bestseller")) {
+                tab = "best-sellers";
+            } else if (actLower.contains("offer")) {
+                tab = "offers";
+            } else if (actLower.contains("blog")) {
+                tab = "blog";
+            } else if (actLower.contains("about")) {
+                tab = "about";
+            } else if (actLower.contains("contact")) {
+                tab = "contact";
+            } else if (actLower.contains("static")) {
+                tab = "static-pages";
             }
         }
 
@@ -973,6 +988,43 @@ public class AdminServlet extends HttpServlet {
                     response.sendRedirect("admin?tab=reviews&success=Review visibility toggled.");
                 }
 
+            } else if ("updateReviewsFooter".equalsIgnoreCase(action)) {
+                String footerText = request.getParameter("footerText");
+                String configPath = request.getServletContext().getRealPath("/WEB-INF/reviews_config.properties");
+                java.util.Properties props = new java.util.Properties();
+                File configFile = new File(configPath);
+                if (configFile.exists()) {
+                    try (java.io.FileInputStream fis = new java.io.FileInputStream(configFile)) {
+                        props.load(fis);
+                    }
+                }
+                props.setProperty("reviews.footer.text", footerText != null ? footerText.trim() : "");
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(configFile)) {
+                    props.store(fos, "Reviews Configurations");
+                }
+                response.sendRedirect("admin?tab=reviews&success=Review section footer updated successfully.");
+
+            } else if ("updateReviewsSettings".equalsIgnoreCase(action)) {
+                String enabled = request.getParameter("enabled");
+                String requireModeration = request.getParameter("requireModeration");
+                String requireLogin = request.getParameter("requireLogin");
+                
+                String configPath = request.getServletContext().getRealPath("/WEB-INF/reviews_config.properties");
+                java.util.Properties props = new java.util.Properties();
+                File configFile = new File(configPath);
+                if (configFile.exists()) {
+                    try (java.io.FileInputStream fis = new java.io.FileInputStream(configFile)) {
+                        props.load(fis);
+                    }
+                }
+                props.setProperty("reviews.enabled", enabled != null ? enabled.trim() : "true");
+                props.setProperty("reviews.require.moderation", requireModeration != null ? requireModeration.trim() : "false");
+                props.setProperty("reviews.require.login", requireLogin != null ? requireLogin.trim() : "true");
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(configFile)) {
+                    props.store(fos, "Reviews Configurations");
+                }
+                response.sendRedirect("admin?tab=reviews&success=Review settings updated successfully.");
+
             } else if ("updateHeroBanner".equalsIgnoreCase(action)) {
                 String heroPage = request.getParameter("heroPage");
                 if (heroPage == null || heroPage.trim().isEmpty()) {
@@ -1084,8 +1136,404 @@ public class AdminServlet extends HttpServlet {
                     response.sendRedirect("admin?tab=reviews&success=Review deleted successfully.");
                 }
 
+            } else if ("addFeatured".equalsIgnoreCase(action)) {
+                String title = request.getParameter("title");
+                String description = request.getParameter("description");
+                String badge = request.getParameter("badge");
+                String linkUrl = request.getParameter("linkUrl");
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+                
+                String imageUrl = uploadSingleFile(request, "cardImage", "image/silkfoundation.jpg");
+                
+                String sql = "INSERT INTO featured_masterpieces (title, description, image_url, badge, link_url, display_order, is_enabled) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, title);
+                ps.setString(2, description);
+                ps.setString(3, imageUrl);
+                ps.setString(4, badge);
+                ps.setString(5, linkUrl);
+                ps.setInt(6, displayOrder);
+                ps.setInt(7, isEnabled);
+                ps.executeUpdate();
+                ps.close();
+                
+                response.sendRedirect("admin?tab=featured&success=Featured card added successfully.");
+
+            } else if ("editFeatured".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+                String title = request.getParameter("title");
+                String description = request.getParameter("description");
+                String badge = request.getParameter("badge");
+                String linkUrl = request.getParameter("linkUrl");
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+                
+                // Get old image URL to fallback
+                String imageUrl = "";
+                try (PreparedStatement psGet = con.prepareStatement("SELECT image_url FROM featured_masterpieces WHERE id = ?")) {
+                    psGet.setInt(1, id);
+                    try (ResultSet rsGet = psGet.executeQuery()) {
+                        if (rsGet.next()) {
+                            imageUrl = rsGet.getString("image_url");
+                        }
+                    }
+                }
+                imageUrl = uploadSingleFile(request, "cardImage", imageUrl);
+                
+                String sql = "UPDATE featured_masterpieces SET title=?, description=?, image_url=?, badge=?, link_url=?, display_order=?, is_enabled=? WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, title);
+                ps.setString(2, description);
+                ps.setString(3, imageUrl);
+                ps.setString(4, badge);
+                ps.setString(5, linkUrl);
+                ps.setInt(6, displayOrder);
+                ps.setInt(7, isEnabled);
+                ps.setInt(8, id);
+                ps.executeUpdate();
+                ps.close();
+                
+                response.sendRedirect("admin?tab=featured&success=Featured card updated successfully.");
+
+            } else if ("deleteFeatured".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+                
+                String sql = "DELETE FROM featured_masterpieces WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, id);
+                ps.executeUpdate();
+                ps.close();
+                
+                response.sendRedirect("admin?tab=featured&success=Featured card deleted.");
+
+            } else if ("addTestimonial".equalsIgnoreCase(action)) {
+                String clientName = request.getParameter("clientName");
+                String reviewText = request.getParameter("reviewText");
+                int rating = Integer.parseInt(request.getParameter("rating"));
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+                
+                String clientImage = uploadSingleFile(request, "clientImage", null);
+                
+                String sql = "INSERT INTO testimonials (client_name, review_text, client_image, rating, display_order, is_enabled) VALUES (?, ?, ?, ?, ?, ?)";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, clientName);
+                ps.setString(2, reviewText);
+                ps.setString(3, clientImage);
+                ps.setInt(4, rating);
+                ps.setInt(5, displayOrder);
+                ps.setInt(6, isEnabled);
+                ps.executeUpdate();
+                ps.close();
+                
+                response.sendRedirect("admin?tab=testimonials&success=Testimonial added successfully.");
+
+            } else if ("editTestimonial".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+                String clientName = request.getParameter("clientName");
+                String reviewText = request.getParameter("reviewText");
+                int rating = Integer.parseInt(request.getParameter("rating"));
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+                
+                // Get old image URL to fallback
+                String clientImage = null;
+                try (PreparedStatement psGet = con.prepareStatement("SELECT client_image FROM testimonials WHERE id = ?")) {
+                    psGet.setInt(1, id);
+                    try (ResultSet rsGet = psGet.executeQuery()) {
+                        if (rsGet.next()) {
+                            clientImage = rsGet.getString("client_image");
+                        }
+                    }
+                }
+                clientImage = uploadSingleFile(request, "clientImage", clientImage);
+                
+                String sql = "UPDATE testimonials SET client_name=?, review_text=?, client_image=?, rating=?, display_order=?, is_enabled=? WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, clientName);
+                ps.setString(2, reviewText);
+                ps.setString(3, clientImage);
+                ps.setInt(4, rating);
+                ps.setInt(5, displayOrder);
+                ps.setInt(6, isEnabled);
+                ps.setInt(7, id);
+                ps.executeUpdate();
+                ps.close();
+                
+                response.sendRedirect("admin?tab=testimonials&success=Testimonial updated successfully.");
+
+            } else if ("deleteTestimonial".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+                
+                String sql = "DELETE FROM testimonials WHERE id=?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, id);
+                ps.executeUpdate();
+                ps.close();
+                
+                response.sendRedirect("admin?tab=testimonials&success=Testimonial deleted.");
+
+            } else if ("addNewArrival".equalsIgnoreCase(action)) {
+                int productId = Integer.parseInt(request.getParameter("productId"));
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+
+                String sql = "INSERT INTO new_arrivals (product_id, display_order, is_enabled) VALUES (?, ?, ?)";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, productId);
+                    ps.setInt(2, displayOrder);
+                    ps.setInt(3, isEnabled);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=new-arrivals&success=Product added to New Arrivals successfully.");
+
+            } else if ("editNewArrival".equalsIgnoreCase(action)) {
+                int productId = Integer.parseInt(request.getParameter("productId"));
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+
+                String sql = "UPDATE new_arrivals SET display_order = ?, is_enabled = ? WHERE product_id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, displayOrder);
+                    ps.setInt(2, isEnabled);
+                    ps.setInt(3, productId);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=new-arrivals&success=New Arrival configuration updated successfully.");
+
+            } else if ("replaceNewArrival".equalsIgnoreCase(action)) {
+                int oldProductId = Integer.parseInt(request.getParameter("oldProductId"));
+                int newProductId = Integer.parseInt(request.getParameter("newProductId"));
+
+                String sql = "UPDATE new_arrivals SET product_id = ? WHERE product_id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, newProductId);
+                    ps.setInt(2, oldProductId);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=new-arrivals&success=Product in New Arrivals replaced successfully.");
+
+            } else if ("removeNewArrival".equalsIgnoreCase(action)) {
+                int productId = Integer.parseInt(request.getParameter("productId"));
+
+                String sql = "DELETE FROM new_arrivals WHERE product_id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, productId);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=new-arrivals&success=Product removed from New Arrivals successfully.");
+
+            } else if ("addBestSeller".equalsIgnoreCase(action)) {
+                int productId = Integer.parseInt(request.getParameter("productId"));
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+
+                String sql = "INSERT INTO best_sellers (product_id, display_order, is_enabled) VALUES (?, ?, ?)";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, productId);
+                    ps.setInt(2, displayOrder);
+                    ps.setInt(3, isEnabled);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=best-sellers&success=Product added to Best Sellers successfully.");
+
+            } else if ("editBestSeller".equalsIgnoreCase(action)) {
+                int productId = Integer.parseInt(request.getParameter("productId"));
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+
+                String sql = "UPDATE best_sellers SET display_order = ?, is_enabled = ? WHERE product_id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, displayOrder);
+                    ps.setInt(2, isEnabled);
+                    ps.setInt(3, productId);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=best-sellers&success=Best Seller configuration updated successfully.");
+
+            } else if ("replaceBestSeller".equalsIgnoreCase(action)) {
+                int oldProductId = Integer.parseInt(request.getParameter("oldProductId"));
+                int newProductId = Integer.parseInt(request.getParameter("newProductId"));
+
+                String sql = "UPDATE best_sellers SET product_id = ? WHERE product_id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, newProductId);
+                    ps.setInt(2, oldProductId);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=best-sellers&success=Product in Best Sellers replaced successfully.");
+
+            } else if ("removeBestSeller".equalsIgnoreCase(action)) {
+                int productId = Integer.parseInt(request.getParameter("productId"));
+
+                String sql = "DELETE FROM best_sellers WHERE product_id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, productId);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=best-sellers&success=Product removed from Best Sellers successfully.");
+
+            } else if ("addOffer".equalsIgnoreCase(action)) {
+                String title = request.getParameter("title");
+                String description = request.getParameter("description");
+                String badge = request.getParameter("badge");
+                String promoCode = request.getParameter("promoCode");
+                String buttonText = request.getParameter("buttonText");
+                String actionUrl = request.getParameter("actionUrl");
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+
+                if (badge != null && badge.trim().isEmpty()) badge = null;
+                if (promoCode != null && promoCode.trim().isEmpty()) promoCode = null;
+                if (buttonText != null && buttonText.trim().isEmpty()) buttonText = null;
+                if (actionUrl != null && actionUrl.trim().isEmpty()) actionUrl = null;
+
+                String sql = "INSERT INTO offers (title, description, badge, promo_code, button_text, action_url, display_order, is_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setString(1, title);
+                    ps.setString(2, description);
+                    ps.setString(3, badge);
+                    ps.setString(4, promoCode);
+                    ps.setString(5, buttonText);
+                    ps.setString(6, actionUrl);
+                    ps.setInt(7, displayOrder);
+                    ps.setInt(8, isEnabled);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=offers&success=Promotion offer created successfully.");
+
+            } else if ("editOffer".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+                String title = request.getParameter("title");
+                String description = request.getParameter("description");
+                String badge = request.getParameter("badge");
+                String promoCode = request.getParameter("promoCode");
+                String buttonText = request.getParameter("buttonText");
+                String actionUrl = request.getParameter("actionUrl");
+                int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+                int isEnabled = Integer.parseInt(request.getParameter("isEnabled"));
+
+                if (badge != null && badge.trim().isEmpty()) badge = null;
+                if (promoCode != null && promoCode.trim().isEmpty()) promoCode = null;
+                if (buttonText != null && buttonText.trim().isEmpty()) buttonText = null;
+                if (actionUrl != null && actionUrl.trim().isEmpty()) actionUrl = null;
+
+                String sql = "UPDATE offers SET title = ?, description = ?, badge = ?, promo_code = ?, button_text = ?, action_url = ?, display_order = ?, is_enabled = ? WHERE id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setString(1, title);
+                    ps.setString(2, description);
+                    ps.setString(3, badge);
+                    ps.setString(4, promoCode);
+                    ps.setString(5, buttonText);
+                    ps.setString(6, actionUrl);
+                    ps.setInt(7, displayOrder);
+                    ps.setInt(8, isEnabled);
+                    ps.setInt(9, id);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=offers&success=Promotion offer updated successfully.");
+
+            } else if ("deleteOffer".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+
+                String sql = "DELETE FROM offers WHERE id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=offers&success=Promotion offer deleted successfully.");
+
+            } else if ("toggleBlogVisibility".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+
+                String sql = "UPDATE blog_submissions SET is_hidden = 1 - is_hidden WHERE id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=blog&success=Blog post visibility toggled successfully.");
+
+            } else if ("deleteBlogAdmin".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+
+                String sql = "DELETE FROM blog_submissions WHERE id = ?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                response.sendRedirect("admin?tab=blog&success=Blog post deleted successfully.");
+
+            } else if ("updateAboutPage".equalsIgnoreCase(action)) {
+                String heroTitle = request.getParameter("about_hero_title");
+                String heroSubtitle = request.getParameter("about_hero_subtitle");
+                String visionTitle = request.getParameter("about_vision_title");
+                String visionText = request.getParameter("about_vision_text");
+                String formulaTitle = request.getParameter("about_formula_title");
+                String formulaText = request.getParameter("about_formula_text");
+                String promiseTitle = request.getParameter("about_promise_title");
+                String promiseText = request.getParameter("about_promise_text");
+
+                updateCMS(con, "about_hero_title", heroTitle);
+                updateCMS(con, "about_hero_subtitle", heroSubtitle);
+                updateCMS(con, "about_vision_title", visionTitle);
+                updateCMS(con, "about_vision_text", visionText);
+                updateCMS(con, "about_formula_title", formulaTitle);
+                updateCMS(con, "about_formula_text", formulaText);
+                updateCMS(con, "about_promise_title", promiseTitle);
+                updateCMS(con, "about_promise_text", promiseText);
+
+                response.sendRedirect("admin?tab=about&success=About page content updated successfully.");
+
+            } else if ("updateContactPage".equalsIgnoreCase(action)) {
+                String heroTitle = request.getParameter("contact_hero_title");
+                String heroSubtitle = request.getParameter("contact_hero_subtitle");
+                String conciergeTitle = request.getParameter("contact_concierge_title");
+                String conciergeSubtitle = request.getParameter("contact_concierge_subtitle");
+                String emailTitle = request.getParameter("contact_email_title");
+                String emailValue = request.getParameter("contact_email_value");
+                String emailDesc = request.getParameter("contact_email_desc");
+                String callTitle = request.getParameter("contact_call_title");
+                String callValue = request.getParameter("contact_call_value");
+                String callDesc = request.getParameter("contact_call_desc");
+                String hqTitle = request.getParameter("contact_hq_title");
+                String hqValue = request.getParameter("contact_hq_value");
+                String formTitle = request.getParameter("contact_form_title");
+
+                updateCMS(con, "contact_hero_title", heroTitle);
+                updateCMS(con, "contact_hero_subtitle", heroSubtitle);
+                updateCMS(con, "contact_concierge_title", conciergeTitle);
+                updateCMS(con, "contact_concierge_subtitle", conciergeSubtitle);
+                updateCMS(con, "contact_email_title", emailTitle);
+                updateCMS(con, "contact_email_value", emailValue);
+                updateCMS(con, "contact_email_desc", emailDesc);
+                updateCMS(con, "contact_call_title", callTitle);
+                updateCMS(con, "contact_call_value", callValue);
+                updateCMS(con, "contact_call_desc", callDesc);
+                updateCMS(con, "contact_hq_title", hqTitle);
+                updateCMS(con, "contact_hq_value", hqValue);
+                updateCMS(con, "contact_form_title", formTitle);
+
+                response.sendRedirect("admin?tab=contact&success=Contact page content updated successfully.");
+
+            } else if ("updateStaticPage".equalsIgnoreCase(action)) {
+                String pagePrefix = request.getParameter("pagePrefix");
+                if (pagePrefix == null || pagePrefix.trim().isEmpty()) {
+                    response.sendRedirect("admin?tab=static-pages&error=Invalid static page configuration.");
+                    return;
+                }
+                String heroTitle = request.getParameter("hero_title");
+                String heroSubtitle = request.getParameter("hero_subtitle");
+                String contentHtml = request.getParameter("content_html");
+
+                updateCMS(con, pagePrefix + "hero_title", heroTitle);
+                updateCMS(con, pagePrefix + "hero_subtitle", heroSubtitle);
+                updateCMS(con, pagePrefix + "content_html", contentHtml);
+
+                response.sendRedirect("admin?tab=static-pages&pageSelect=" + pagePrefix + "&success=Static page content updated successfully.");
+
             } else {
-                response.sendRedirect("admin?tab=products&error=Unknown action: " + action);
+                response.sendRedirect("admin?tab=" + tab + "&error=Unknown action: " + action);
             }
 
             con.close();
@@ -1181,5 +1629,59 @@ public class AdminServlet extends HttpServlet {
             }
         }
         return urls;
+    }
+
+    // Helper method to upload single file
+    private String uploadSingleFile(HttpServletRequest request, String paramName, String defaultPath) throws ServletException, IOException {
+        try {
+            Part part = request.getPart(paramName);
+            if (part != null && part.getSize() > 0) {
+                String fileName = java.nio.file.Paths.get(part.getSubmittedFileName()).getFileName().toString();
+                String nameWithoutExt = fileName;
+                String ext = "";
+                int dotIndex = fileName.lastIndexOf('.');
+                if (dotIndex > 0) {
+                    nameWithoutExt = fileName.substring(0, dotIndex);
+                    ext = fileName.substring(dotIndex);
+                }
+                String uniqueFileName = nameWithoutExt + "_" + System.currentTimeMillis() + ext;
+                String uploadPath = request.getServletContext().getRealPath("") + File.separator + "image";
+                File uploadDir = new File(uploadPath);
+                if (!uploadDir.exists()) {
+                    uploadDir.mkdirs();
+                }
+                String filePath = uploadPath + File.separator + uniqueFileName;
+                part.write(filePath);
+                return "image/" + uniqueFileName;
+            }
+        } catch (Exception e) {
+            // Log or ignore if request isn't multipart or part is missing
+        }
+        return defaultPath;
+    }
+
+    private void updateCMS(Connection con, String key, String value) throws SQLException {
+        boolean exists = false;
+        try (PreparedStatement checkPs = con.prepareStatement("SELECT COUNT(*) FROM cms_content WHERE content_key = ?")) {
+            checkPs.setString(1, key);
+            try (ResultSet rs = checkPs.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    exists = true;
+                }
+            }
+        }
+        if (exists) {
+            try (PreparedStatement updatePs = con.prepareStatement("UPDATE cms_content SET content_value = ? WHERE content_key = ?")) {
+                updatePs.setString(1, value != null ? value : "");
+                updatePs.setString(2, key);
+                updatePs.executeUpdate();
+            }
+        } else {
+            try (PreparedStatement insertPs = con.prepareStatement("INSERT INTO cms_content (content_key, content_value) VALUES (?, ?)")) {
+                insertPs.setString(1, key);
+                insertPs.setString(2, value != null ? value : "");
+                insertPs.executeUpdate();
+            }
+        }
     }
 }

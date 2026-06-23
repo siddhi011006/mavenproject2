@@ -1,4 +1,8 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="java.util.Map" %>
+<%
+    Map<String, String> cms = com.mycompany.mavenproject2.CMSHelper.getPageContent("privacy_");
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,8 +20,8 @@
     <!-- Hero Header -->
     <section class="hero" style="height: 30vh; min-height: 200px; background: linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88)), url('<%= heroConfigProps.getProperty("privacy", "image/bc2.jpg") %>') no-repeat center center/cover;">
         <div class="hero-content">
-            <h1 style="font-size: 2.5rem;">Privacy Policy</h1>
-            <p>Your privacy and safety are extremely important to us. Learn how we secure your data.</p>
+            <h1 style="font-size: 2.5rem;"><%= cms.getOrDefault("privacy_hero_title", "Privacy Policy") %></h1>
+            <p><%= cms.getOrDefault("privacy_hero_subtitle", "Your privacy and safety are extremely important to us. Learn how we secure your data.") %></p>
         </div>
     </section>
 
@@ -25,20 +29,22 @@
     <div class="page-container" style="max-width: 800px; color:var(--text-secondary); font-size:0.95rem;">
         
         <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 24px; padding: 40px; display:flex; flex-direction:column; gap:25px; box-shadow: var(--shadow-lux);">
-            <div>
-                <h3 style="color:var(--burgundy); font-size:1.3rem; font-family:'Playfair Display', serif; margin-bottom:10px;">1. Information We Collect</h3>
-                <p>We collect personal details (such as your name, email address, delivery address, and payment method options) during checkout or account registration to fulfill your orders and provide account features.</p>
-            </div>
-
-            <div>
-                <h3 style="color:var(--burgundy); font-size:1.3rem; font-family:'Playfair Display', serif; margin-bottom:10px;">2. How We Secure Your Data</h3>
-                <p>All database connections and transactions are encrypted. We do not store cardholder credentials on our local servers; payments are processed securely through certified gateways.</p>
-            </div>
-
-            <div>
-                <h3 style="color:var(--burgundy); font-size:1.3rem; font-family:'Playfair Display', serif; margin-bottom:10px;">3. Cookie Utilization</h3>
-                <p>Our website utilizes local cookies to manage active shopping sessions, preserve guest shopping bag selections, and remember login preferences.</p>
-            </div>
+            <%= cms.getOrDefault("privacy_content_html", 
+                "<div>\n" +
+                "    <h3 style=\"color:var(--burgundy); font-size:1.3rem; font-family:'Playfair Display', serif; margin-bottom:10px;\">1. Information We Collect</h3>\n" +
+                "    <p>We collect personal details (such as your name, email address, delivery address, and payment method options) during checkout or account registration to fulfill your orders and provide account features.</p>\n" +
+                "</div>\n" +
+                "\n" +
+                "<div>\n" +
+                "    <h3 style=\"color:var(--burgundy); font-size:1.3rem; font-family:'Playfair Display', serif; margin-bottom:10px;\">2. How We Secure Your Data</h3>\n" +
+                "    <p>All database connections and transactions are encrypted. We do not store cardholder credentials on our local servers; payments are processed securely through certified gateways.</p>\n" +
+                "</div>\n" +
+                "\n" +
+                "<div>\n" +
+                "    <h3 style=\"color:var(--burgundy); font-size:1.3rem; font-family:'Playfair Display', serif; margin-bottom:10px;\">3. Cookie Utilization</h3>\n" +
+                "    <p>Our website utilizes local cookies to manage active shopping sessions, preserve guest shopping bag selections, and remember login preferences.</p>\n" +
+                "</div>"
+            ) %>
         </div>
 
     </div>

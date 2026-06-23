@@ -1,4 +1,8 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="java.util.Map" %>
+<%
+    Map<String, String> cms = com.mycompany.mavenproject2.CMSHelper.getPageContent("contact_");
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,8 +20,8 @@
     <!-- Hero banner -->
     <section class="hero" style="height: 35vh; min-height: 250px; background: linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88)), url('<%= heroConfigProps.getProperty("contact", "image/bc2.jpg") %>') no-repeat center center/cover;">
         <div class="hero-content">
-            <h1 style="font-size: 2.8rem;">Get In Touch</h1>
-            <p>Have questions about shade matching, orders, or shipping? Our experts are here to assist you.</p>
+            <h1 style="font-size: 2.8rem;"><%= cms.getOrDefault("contact_hero_title", "Get In Touch") %></h1>
+            <p><%= cms.getOrDefault("contact_hero_subtitle", "Have questions about shade matching, orders, or shipping? Our experts are here to assist you.") %></p>
         </div>
     </section>
 
@@ -50,39 +54,39 @@
             
             <!-- Contact Info Panel -->
             <div class="contact-info-panel">
-                <h2 style="font-size: 1.8rem; margin-bottom: 15px;">Luxury Concierge</h2>
-                <p style="color: var(--text-secondary); font-size: 0.95rem;">Reach out to our beauty concierge through the channels below, or submit the digital contact form.</p>
+                <h2 style="font-size: 1.8rem; margin-bottom: 15px;"><%= cms.getOrDefault("contact_concierge_title", "Luxury Concierge") %></h2>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;"><%= cms.getOrDefault("contact_concierge_subtitle", "Reach out to our beauty concierge through the channels below, or submit the digital contact form.") %></p>
                 
                 <div class="contact-card-item">
                     <i class="fas fa-envelope"></i>
                     <div>
-                        <h4>Email Us</h4>
-                        <p>concierge@luxeglow.com</p>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">24/7 client response desk</span>
+                        <h4><%= cms.getOrDefault("contact_email_title", "Email Us") %></h4>
+                        <p><%= cms.getOrDefault("contact_email_value", "concierge@luxeglow.com") %></p>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);"><%= cms.getOrDefault("contact_email_desc", "24/7 client response desk") %></span>
                     </div>
                 </div>
 
                 <div class="contact-card-item">
                     <i class="fas fa-phone-alt"></i>
                     <div>
-                        <h4>Call Us</h4>
-                        <p>+1 (800) 555-GLOW</p>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">Mon - Fri, 9 AM - 6 PM EST</span>
+                        <h4><%= cms.getOrDefault("contact_call_title", "Call Us") %></h4>
+                        <p><%= cms.getOrDefault("contact_call_value", "+1 (800) 555-GLOW") %></p>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);"><%= cms.getOrDefault("contact_call_desc", "Mon - Fri, 9 AM - 6 PM EST") %></span>
                     </div>
                 </div>
 
                 <div class="contact-card-item">
                     <i class="fas fa-map-marker-alt"></i>
                     <div>
-                        <h4>Headquarters</h4>
-                        <p>5th Avenue, Luxury District<br>New York, NY 10011</p>
+                        <h4><%= cms.getOrDefault("contact_hq_title", "Headquarters") %></h4>
+                        <p><%= cms.getOrDefault("contact_hq_value", "5th Avenue, Luxury District\nNew York, NY 10011").replace("\n", "<br>") %></p>
                     </div>
                 </div>
             </div>
 
             <!-- Form Wrapper -->
             <div class="contact-info-panel" style="background: var(--bg-card); border-color: var(--border-color);">
-                <h2 style="font-size: 1.8rem; margin-bottom: 25px;">Send Us a Message</h2>
+                <h2 style="font-size: 1.8rem; margin-bottom: 25px;"><%= cms.getOrDefault("contact_form_title", "Send Us a Message") %></h2>
                 <form action="ContactServlet" method="POST">
                     
                     <div class="form-group">

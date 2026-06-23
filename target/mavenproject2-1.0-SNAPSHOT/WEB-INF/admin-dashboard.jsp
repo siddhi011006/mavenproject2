@@ -41,6 +41,13 @@
     List<Map<String, Object>> monthlySalesList = (List<Map<String, Object>>) request.getAttribute("monthlySalesList");
     List<Map<String, Object>> bestSellersList = (List<Map<String, Object>>) request.getAttribute("bestSellersList");
 
+    // Global declarations for CMS variables to prevent JSP compilation errors
+    int newArrivalsCount = 0;
+    List<Map<String, Object>> existingNewArrivals = new ArrayList<>();
+    List<Map<String, Object>> allOtherProducts = new ArrayList<>();
+    List<Map<String, Object>> existingBestSellers = new ArrayList<>();
+    List<Map<String, Object>> allOtherBestSellers = new ArrayList<>();
+
     // Retrieve and parse selected product ID null-safely at page scope
     String prodIdParam = request.getParameter("id");
     int prodId = 0;
@@ -186,6 +193,51 @@
                     <li>
                         <button class="<%= "hero".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=hero'">
                             <i class="fas fa-image"></i> Hero Banner
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "featured".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=featured'">
+                            <i class="fas fa-th-large"></i> Featured Cards
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "testimonials".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=testimonials'">
+                            <i class="fas fa-comments"></i> Testimonials
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "new-arrivals".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=new-arrivals'">
+                            <i class="fas fa-magic"></i> New Arrivals
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "best-sellers".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=best-sellers'">
+                            <i class="fas fa-fire"></i> Best Sellers
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "offers".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=offers'">
+                            <i class="fas fa-gift"></i> Offers CMS
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "blog".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=blog'">
+                            <i class="fas fa-newspaper"></i> Blog Moderation
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "about".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=about'">
+                            <i class="fas fa-info-circle"></i> About Page CMS
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "contact".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=contact'">
+                            <i class="fas fa-address-book"></i> Contact Page CMS
+                        </button>
+                    </li>
+                    <li>
+                        <button class="<%= "static-pages".equals(activeTab) ? "active" : "" %>" onclick="location.href='admin?tab=static-pages'">
+                            <i class="fas fa-copy"></i> Policy Pages CMS
                         </button>
                     </li>
                     <li style="margin-top:20px; border-top:1px solid var(--border-light); padding-top:15px;">
@@ -544,6 +596,9 @@
                                     
                                     <td style="vertical-align:middle; text-align:right; padding-right:15px;">
                                         <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
+                                            <a href="admin?tab=reviews&productId=<%= id %>" class="btn-outline" style="border-radius:6px; padding:6px 10px; font-size:0.75rem; text-transform:none; display:inline-flex; align-items:center; gap:4px; color:var(--gold); border-color:var(--gold);">
+                                                <i class="fas fa-star"></i> Reviews
+                                            </a>
                                             <a href="admin?tab=product-details&id=<%= id %>" class="btn-outline" style="border-radius:6px; padding:6px 10px; font-size:0.75rem; text-transform:none; display:inline-flex; align-items:center; gap:4px;">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
@@ -1153,10 +1208,16 @@
                             }
                         }
                     %>
-                    <div style="text-align:left; margin-bottom:25px;">
+                    <div style="text-align:left; margin-bottom:25px; display:flex; gap:10px; align-items:center;">
                         <a href="admin?tab=products" class="btn-outline" style="padding:8px 16px; border-radius:8px; text-decoration:none; font-size:0.85rem; display:inline-block;">
                             <i class="fas fa-arrow-left" style="margin-right:8px;"></i> Back to Catalog
                         </a>
+                        <% if (prodId > 0) { %>
+                            <a href="admin?tab=reviews&productId=<%= prodId %>" class="btn-outline" style="padding:8px 16px; border-radius:8px; text-decoration:none; font-size:0.85rem; display:inline-block; color:var(--gold); border-color:var(--gold);">
+                                <i class="fas fa-star" style="margin-right:8px;"></i> View Reviews
+                            </a>
+                        <% } %>
+                    </div>
                         <h2 style="font-size:1.8rem; border-bottom:none; margin:15px 0 0 0; padding-bottom:0; font-family:'Playfair Display', serif;">
                             Manage Product: <span style="color:var(--gold);" id="detailsProductNameHeader"><%= pName %></span>
                         </h2>
@@ -1622,14 +1683,99 @@
                     </table>
                     </div>
 
-                 <% } else if ("reviews".equalsIgnoreCase(activeTab)) { %>
+                  <% } else if ("reviews".equalsIgnoreCase(activeTab)) { 
+                     // Load reviews configuration properties
+                     java.util.Properties reviewsProps = new java.util.Properties();
+                     try {
+                         String rcPath = application.getRealPath("/WEB-INF/reviews_config.properties");
+                         if (rcPath != null) {
+                             java.io.File rcf = new java.io.File(rcPath);
+                             if (rcf.exists()) {
+                                 try (java.io.FileInputStream fis = new java.io.FileInputStream(rcf)) {
+                                     reviewsProps.load(fis);
+                                 }
+                             }
+                         }
+                     } catch (Exception e) {
+                         e.printStackTrace();
+                     }
+                     String reviewFooterText = reviewsProps.getProperty("reviews.footer.text", "Disclaimer: Customer reviews are individual experiences and may not reflect dermatological outcomes for all skin types.");
+                     String reviewsEnabled = reviewsProps.getProperty("reviews.enabled", "true");
+                     String reviewsRequireModeration = reviewsProps.getProperty("reviews.require.moderation", "false");
+                     String reviewsRequireLogin = reviewsProps.getProperty("reviews.require.login", "true");
+                 %>
                     <!-- ==========================================
                          REVIEWS TAB
                          ========================================== -->
                     <div style="text-align:left; margin-bottom:25px;">
-                        <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif;">Reviews Moderation</h2>
+                        <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Reviews Management & Moderation</h2>
                         <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Audit client product experiences, filter feedback, or moderate visibility.</p>
                     </div>
+
+                    <!-- Config Cards Stacked (Premium Layout - Footer Above Settings) -->
+                    <div style="display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px;">
+                        
+                        <!-- 1. Review Section Footer Card -->
+                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux); display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <h3 style="font-size:1.3rem; margin-bottom:10px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;">Review Section Footer</h3>
+                                <p style="color:var(--text-muted); font-size:0.8rem; margin-top:0; margin-bottom:20px;">Disclaimer or custom footer text displayed below the customer reviews section on product pages.</p>
+                                
+                                <form action="AdminServlet" method="POST" style="margin:0;">
+                                    <input type="hidden" name="action" value="updateReviewsFooter">
+                                    <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:8px;">Footer Disclaimer Text</label>
+                                        <textarea name="footerText" rows="4" required style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none; resize:vertical;"><%= reviewFooterText %></textarea>
+                                    </div>
+                                    <button type="submit" class="btn-gold" style="width:100%; border-radius:30px; padding:12px; font-size:0.85rem; font-weight:600; margin:0;">
+                                        Save Footer Configuration
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- 2. Review Settings Card -->
+                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux); display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <h3 style="font-size:1.3rem; margin-bottom:10px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;">Review Settings</h3>
+                                <p style="color:var(--text-muted); font-size:0.8rem; margin-top:0; margin-bottom:20px;">Configure validation requirements, default visibility, and toggles for user-submitted feedback.</p>
+                                
+                                <form action="AdminServlet" method="POST" style="margin:0;">
+                                    <input type="hidden" name="action" value="updateReviewsSettings">
+                                    
+                                    <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:6px;">Storefront Reviews Display</label>
+                                        <select name="enabled" required style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none;">
+                                            <option value="true" <%= "true".equals(reviewsEnabled) ? "selected" : "" %>>Enabled (Render reviews tab on product pages)</option>
+                                            <option value="false" <%= "false".equals(reviewsEnabled) ? "selected" : "" %>>Disabled (Hide reviews section on product pages)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:6px;">Review Moderation Queue</label>
+                                        <select name="requireModeration" required style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none;">
+                                            <option value="true" <%= "true".equals(reviewsRequireModeration) ? "selected" : "" %>>Moderated (New reviews start hidden until approved)</option>
+                                            <option value="false" <%= "false".equals(reviewsRequireModeration) ? "selected" : "" %>>Auto-Publish (New reviews are visible instantly)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:6px;">Authentication Requirement</label>
+                                        <select name="requireLogin" required style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none;">
+                                            <option value="true" <%= "true".equals(reviewsRequireLogin) ? "selected" : "" %>>Registered Clients Only (Must sign in to review)</option>
+                                            <option value="false" <%= "false".equals(reviewsRequireLogin) ? "selected" : "" %>>Public Submissions (Anyone can write a review)</option>
+                                        </select>
+                                    </div>
+
+                                    <button type="submit" class="btn-gold" style="width:100%; border-radius:30px; padding:12px; font-size:0.85rem; font-weight:600; margin:0;">
+                                        Save Settings Configuration
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+
 
                     <!-- Search Bar for Reviews -->
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:25px; flex-wrap:wrap;">
@@ -1731,6 +1877,8 @@
                                 }
                             %>
                         </tbody>
+                    </table>
+                    </div>
                                       <% } else if ("hero".equalsIgnoreCase(activeTab)) { 
                         java.util.Properties adminHeroProps = new java.util.Properties();
                         try {
@@ -1884,11 +2032,867 @@
                             }
                         }
                     </script>
-                 <% } %>
+                 <% } else if ("featured".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                          FEATURED MASTERPIECES CMS TAB
+                          ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Curated Featured Masterpieces</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Manage the promotional showcase cards displayed on the store homepage.</p>
+                        </div>
+                        <button class="btn-gold" style="border-radius:12px; padding:10px 24px;" onclick="openAddFeaturedModal()">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i> Add Featured Card
+                        </button>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                    <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Thumbnail</th>
+                                <th>Card Title</th>
+                                <th>Badge</th>
+                                <th>Description</th>
+                                <th>Link URL</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                try {
+                                    Connection con = DBConnection.getConnection();
+                                    Statement st = con.createStatement();
+                                    ResultSet rs = st.executeQuery("SELECT * FROM featured_masterpieces ORDER BY display_order ASC, id ASC");
+                                    boolean hasFeatured = false;
+                                    while (rs.next()) {
+                                        hasFeatured = true;
+                                        int id = rs.getInt("id");
+                                        String title = rs.getString("title");
+                                        String desc = rs.getString("description");
+                                        String img = rs.getString("image_url");
+                                        String badge = rs.getString("badge");
+                                        String link = rs.getString("link_url");
+                                        int orderVal = rs.getInt("display_order");
+                                        int enabled = rs.getInt("is_enabled");
+                            %>
+                            <tr>
+                                <td style="font-weight:600;"><%= orderVal %></td>
+                                <td>
+                                    <img src="<%= img %>" style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);" alt="<%= title %>">
+                                </td>
+                                <td style="font-weight:600;"><%= title %></td>
+                                <td><span class="status-badge" style="background:rgba(197, 171, 87, 0.1); color:var(--gold); border:1px solid var(--gold);"><%= badge %></span></td>
+                                <td style="font-size:0.8rem; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= desc %>"><%= desc %></td>
+                                <td style="font-size:0.8rem; color:var(--text-muted);"><%= link %></td>
+                                <td>
+                                    <span class="status-badge <%= enabled == 1 ? "status-completed" : "status-cancelled" %>">
+                                        <%= enabled == 1 ? "Enabled" : "Disabled" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                        <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem;" onclick="openEditFeaturedModal(<%= id %>, '<%= title.replace("'", "\\'") %>', '<%= desc.replace("'", "\\'") %>', '<%= img.replace("'", "\\'") %>', '<%= badge.replace("'", "\\'") %>', '<%= link.replace("'", "\\'") %>', <%= orderVal %>, <%= enabled %>)">
+                                            Edit
+                                        </button>
+                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete Featured Card: <%= title %>?');">
+                                            <input type="hidden" name="action" value="deleteFeatured">
+                                            <input type="hidden" name="id" value="<%= id %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent;">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <%
+                                    }
+                                    if (!hasFeatured) {
+                            %>
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No featured masterpiece cards added yet.</td>
+                            </tr>
+                            <%
+                                    }
+                                    rs.close();
+                                    st.close();
+                                    con.close();
+                                } catch (Exception e) {
+                                    out.println("<tr><td colspan='8' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
+                                }
+                            %>
+                        </tbody>
+                    </table>
+                    </div>
+
+                 <% } else if ("testimonials".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                          TESTIMONIALS CMS TAB
+                          ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Customer Testimonials</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Manage client feedback and ratings displayed on the store homepage.</p>
+                        </div>
+                        <button class="btn-gold" style="border-radius:12px; padding:10px 24px;" onclick="openAddTestimonialModal()">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i> Add Testimonial
+                        </button>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                    <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Thumbnail</th>
+                                <th>Client Name</th>
+                                <th>Stars</th>
+                                <th>Review Text</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                try {
+                                    Connection con = DBConnection.getConnection();
+                                    Statement st = con.createStatement();
+                                    ResultSet rs = st.executeQuery("SELECT * FROM testimonials ORDER BY display_order ASC, id ASC");
+                                    boolean hasTestimonials = false;
+                                    while (rs.next()) {
+                                        hasTestimonials = true;
+                                        int id = rs.getInt("id");
+                                        String name = rs.getString("client_name");
+                                        String text = rs.getString("review_text");
+                                        String img = rs.getString("client_image");
+                                        int rating = rs.getInt("rating");
+                                        int orderVal = rs.getInt("display_order");
+                                        int enabled = rs.getInt("is_enabled");
+                            %>
+                            <tr>
+                                <td style="font-weight:600;"><%= orderVal %></td>
+                                <td>
+                                    <% if (img != null && !img.trim().isEmpty()) { %>
+                                        <img src="<%= img %>" style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:1px solid var(--border-color);" alt="<%= name %>">
+                                    <% } else { %>
+                                        <div style="width:40px; height:40px; border-radius:50%; background:var(--bg-dark); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.75rem;"><i class="fas fa-user"></i></div>
+                                    <% } %>
+                                </td>
+                                <td style="font-weight:600;"><%= name %></td>
+                                <td style="color:var(--gold); white-space:nowrap;">
+                                    <% for (int i = 0; i < rating; i++) { %><i class="fas fa-star" style="font-size:0.75rem;"></i><% } %>
+                                </td>
+                                <td style="font-size:0.8rem; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= text %>"><%= text %></td>
+                                <td>
+                                    <span class="status-badge <%= enabled == 1 ? "status-completed" : "status-cancelled" %>">
+                                        <%= enabled == 1 ? "Enabled" : "Disabled" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                        <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem;" onclick="openEditTestimonialModal(<%= id %>, '<%= name.replace("'", "\\'") %>', '<%= text.replace("'", "\\'") %>', '<%= (img != null ? img.replace("'", "\\'") : "") %>', <%= rating %>, <%= orderVal %>, <%= enabled %>)">
+                                            Edit
+                                        </button>
+                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete testimonial from <%= name %>?');">
+                                            <input type="hidden" name="action" value="deleteTestimonial">
+                                            <input type="hidden" name="id" value="<%= id %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent;">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <%
+                                    }
+                                    if (!hasTestimonials) {
+                            %>
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No testimonials added yet.</td>
+                            </tr>
+                            <%
+                                    }
+                                    rs.close();
+                                    st.close();
+                                    con.close();
+                                } catch (Exception e) {
+                                    out.println("<tr><td colspan='7' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
+                                }
+                            %>
+                        </tbody>
+                    </table>
+                    </div>
+
+                  <% } else if ("new-arrivals".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                          NEW ARRIVALS CMS TAB
+                          ========================================== -->
+                    <%
+                        newArrivalsCount = 0;
+                        existingNewArrivals = new java.util.ArrayList<>();
+                        allOtherProducts = new java.util.ArrayList<>();
+                        try {
+                            Connection con = DBConnection.getConnection();
+                            
+                            // Get existing new arrivals
+                            String sqlExisting = "SELECT p.id, p.name, p.category, p.price, na.display_order, na.is_enabled "
+                                               + "FROM new_arrivals na JOIN products p ON na.product_id = p.id "
+                                               + "ORDER BY na.display_order ASC, na.product_id DESC";
+                            try (PreparedStatement ps = con.prepareStatement(sqlExisting);
+                                 ResultSet rs = ps.executeQuery()) {
+                                while (rs.next()) {
+                                    newArrivalsCount++;
+                                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                                    map.put("id", rs.getInt("id"));
+                                    map.put("name", rs.getString("name"));
+                                    map.put("category", rs.getString("category"));
+                                    map.put("price", rs.getDouble("price"));
+                                    map.put("display_order", rs.getInt("display_order"));
+                                    map.put("is_enabled", rs.getInt("is_enabled"));
+                                    existingNewArrivals.add(map);
+                                }
+                            }
+
+                            // Get all other active products not currently in New Arrivals
+                            String sqlOther = "SELECT id, name FROM products WHERE status = 'ACTIVE' "
+                                            + "AND id NOT IN (SELECT product_id FROM new_arrivals) ORDER BY name ASC";
+                            try (PreparedStatement ps = con.prepareStatement(sqlOther);
+                                 ResultSet rs = ps.executeQuery()) {
+                                while (rs.next()) {
+                                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                                    map.put("id", rs.getInt("id"));
+                                    map.put("name", rs.getString("name"));
+                                    allOtherProducts.add(map);
+                                }
+                            }
+                            con.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    %>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">New Arrivals Catalog CMS</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Manage products displayed in the New Arrivals showcase page.</p>
+                        </div>
+                        <button class="btn-gold" style="border-radius:12px; padding:10px 24px;" onclick="openAddNewArrivalModal()">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i> Add Product
+                        </button>
+                    </div>
+
+                    <% if (newArrivalsCount < 8 || newArrivalsCount > 16) { %>
+                    <div style="background: rgba(197, 171, 87, 0.08); border: 1px solid var(--gold); padding: 18px 24px; border-radius: 16px; margin-bottom: 25px; color: var(--gold); font-size: 0.85rem; text-align: left; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-lux);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 1.2rem;"></i>
+                        <div>
+                            <strong>Recommendation:</strong> For optimal storefront visual alignment, it is highly recommended to keep between <strong>8 and 16 products</strong> in the New Arrivals showcase. (Current count: <strong><%= newArrivalsCount %></strong>)
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <div class="admin-table-wrapper">
+                    <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Thumbnail</th>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                for (java.util.Map<String, Object> item : existingNewArrivals) {
+                                    int pid = (Integer) item.get("id");
+                                    String name = (String) item.get("name");
+                                    String category = (String) item.get("category");
+                                    double price = (Double) item.get("price");
+                                    int orderVal = (Integer) item.get("display_order");
+                                    int enabled = (Integer) item.get("is_enabled");
+                                    String img = com.mycompany.mavenproject2.ProductImageHelper.getProductImage(pid);
+                            %>
+                            <tr>
+                                <td style="font-weight:600;"><%= orderVal %></td>
+                                <td>
+                                    <img src="<%= img %>" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);" alt="<%= name %>">
+                                </td>
+                                <td style="font-weight:600;"><%= name %></td>
+                                <td><%= category %></td>
+                                <td><%= com.mycompany.mavenproject2.CurrencyHelper.formatPrice(price, "India") %></td>
+                                <td>
+                                    <span class="status-badge <%= enabled == 1 ? "status-completed" : "status-cancelled" %>">
+                                        <%= enabled == 1 ? "Enabled" : "Disabled" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                        <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem;" onclick="openEditNewArrivalModal(<%= pid %>, '<%= name.replace("'", "\\'") %>', <%= orderVal %>, <%= enabled %>)">
+                                            Edit
+                                        </button>
+                                        <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color: var(--gold); border-color: var(--gold); background: transparent;" onclick="openReplaceNewArrivalModal(<%= pid %>, '<%= name.replace("'", "\\'") %>')">
+                                            Replace
+                                        </button>
+                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Remove <%= name %> from New Arrivals?');">
+                                            <input type="hidden" name="action" value="removeNewArrival">
+                                            <input type="hidden" name="productId" value="<%= pid %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent;">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <%
+                                }
+                                if (existingNewArrivals.isEmpty()) {
+                            %>
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No products in New Arrivals.</td>
+                            </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                    </div>
+
+                  <% } else if ("best-sellers".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                          BEST SELLERS CMS TAB
+                          ========================================== -->
+                    <%
+                        existingBestSellers = new java.util.ArrayList<>();
+                        allOtherBestSellers = new java.util.ArrayList<>();
+                        try {
+                            Connection con = DBConnection.getConnection();
+                            
+                            // Get existing best sellers
+                            String sqlExisting = "SELECT p.id, p.name, p.category, p.price, bs.display_order, bs.is_enabled "
+                                               + "FROM best_sellers bs JOIN products p ON bs.product_id = p.id "
+                                               + "ORDER BY bs.display_order ASC, bs.product_id DESC";
+                            try (PreparedStatement ps = con.prepareStatement(sqlExisting);
+                                 ResultSet rs = ps.executeQuery()) {
+                                while (rs.next()) {
+                                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                                    map.put("id", rs.getInt("id"));
+                                    map.put("name", rs.getString("name"));
+                                    map.put("category", rs.getString("category"));
+                                    map.put("price", rs.getDouble("price"));
+                                    map.put("display_order", rs.getInt("display_order"));
+                                    map.put("is_enabled", rs.getInt("is_enabled"));
+                                    existingBestSellers.add(map);
+                                }
+                            }
+
+                            // Get all other active products not currently in Best Sellers
+                            String sqlOther = "SELECT id, name FROM products WHERE status = 'ACTIVE' "
+                                            + "AND id NOT IN (SELECT product_id FROM best_sellers) ORDER BY name ASC";
+                            try (PreparedStatement ps = con.prepareStatement(sqlOther);
+                                 ResultSet rs = ps.executeQuery()) {
+                                while (rs.next()) {
+                                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                                    map.put("id", rs.getInt("id"));
+                                    map.put("name", rs.getString("name"));
+                                    allOtherBestSellers.add(map);
+                                }
+                            }
+                            con.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    %>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Best Sellers Catalog CMS</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Manage products displayed in the Best Sellers showcase page.</p>
+                        </div>
+                        <button class="btn-gold" style="border-radius:12px; padding:10px 24px;" onclick="openAddBestSellerModal()">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i> Add Product
+                        </button>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                    <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Thumbnail</th>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                for (java.util.Map<String, Object> item : existingBestSellers) {
+                                    int pid = (Integer) item.get("id");
+                                    String name = (String) item.get("name");
+                                    String category = (String) item.get("category");
+                                    double price = (Double) item.get("price");
+                                    int orderVal = (Integer) item.get("display_order");
+                                    int enabled = (Integer) item.get("is_enabled");
+                                    String img = com.mycompany.mavenproject2.ProductImageHelper.getProductImage(pid);
+                            %>
+                            <tr>
+                                <td style="font-weight:600;"><%= orderVal %></td>
+                                <td>
+                                    <img src="<%= img %>" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);" alt="<%= name %>">
+                                </td>
+                                <td style="font-weight:600;"><%= name %></td>
+                                <td><%= category %></td>
+                                <td><%= com.mycompany.mavenproject2.CurrencyHelper.formatPrice(price, "India") %></td>
+                                <td>
+                                    <span class="status-badge <%= enabled == 1 ? "status-completed" : "status-cancelled" %>">
+                                        <%= enabled == 1 ? "Enabled" : "Disabled" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                        <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem;" onclick="openEditBestSellerModal(<%= pid %>, '<%= name.replace("'", "\\'") %>', <%= orderVal %>, <%= enabled %>)">
+                                            Edit
+                                        </button>
+                                        <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color: var(--gold); border-color: var(--gold); background: transparent;" onclick="openReplaceBestSellerModal(<%= pid %>, '<%= name.replace("'", "\\'") %>')">
+                                            Replace
+                                        </button>
+                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Remove <%= name %> from Best Sellers?');">
+                                            <input type="hidden" name="action" value="removeBestSeller">
+                                            <input type="hidden" name="productId" value="<%= pid %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent;">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <%
+                                }
+                                if (existingBestSellers.isEmpty()) {
+                            %>
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No products in Best Sellers.</td>
+                            </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                    </div>
+
+                  <% } else if ("offers".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                          OFFERS CMS TAB
+                          ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Offers & Promotions Management</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Manage active client discount offers and vouchers displayed on the Offers page.</p>
+                        </div>
+                        <button class="btn-gold" style="border-radius:12px; padding:10px 24px;" onclick="openAddOfferModal()">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i> Add Offer Card
+                        </button>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                    <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Title</th>
+                                <th>Badge</th>
+                                <th>Promo Code</th>
+                                <th>Button CTA</th>
+                                <th>Action Link</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                try {
+                                    Connection con = DBConnection.getConnection();
+                                    Statement st = con.createStatement();
+                                    ResultSet rs = st.executeQuery("SELECT * FROM offers ORDER BY display_order ASC, id ASC");
+                                    boolean hasOffers = false;
+                                    while (rs.next()) {
+                                        hasOffers = true;
+                                        int id = rs.getInt("id");
+                                        String title = rs.getString("title");
+                                        String desc = rs.getString("description");
+                                        String badge = rs.getString("badge");
+                                        String code = rs.getString("promo_code");
+                                        String btnText = rs.getString("button_text");
+                                        String actionUrl = rs.getString("action_url");
+                                        int orderVal = rs.getInt("display_order");
+                                        int enabled = rs.getInt("is_enabled");
+                            %>
+                            <tr>
+                                <td style="font-weight:600;"><%= orderVal %></td>
+                                <td style="font-weight:600;"><%= title %></td>
+                                <td>
+                                    <% if (badge != null) { %>
+                                        <span class="status-badge" style="background:rgba(197,171,87,0.1); color:var(--gold); border:1px solid var(--gold);"><%= badge %></span>
+                                    <% } %>
+                                </td>
+                                <td style="font-family:monospace; font-weight:700;"><%= code != null && !code.trim().isEmpty() ? code : "—" %></td>
+                                <td><%= btnText != null && !btnText.trim().isEmpty() ? btnText : "—" %></td>
+                                <td style="font-size:0.8rem; color:var(--text-muted);"><%= actionUrl != null && !actionUrl.trim().isEmpty() ? actionUrl : "—" %></td>
+                                <td>
+                                    <span class="status-badge <%= enabled == 1 ? "status-completed" : "status-cancelled" %>">
+                                        <%= enabled == 1 ? "Enabled" : "Disabled" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                        <button class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem;" onclick="openEditOfferModal(<%= id %>, '<%= title.replace("'", "\\'") %>', '<%= desc.replace("'", "\\'").replace("\n", "\\n").replace("\r", "") %>', '<%= (badge != null ? badge.replace("'", "\\'") : "") %>', '<%= (code != null ? code.replace("'", "\\'") : "") %>', '<%= (btnText != null ? btnText.replace("'", "\\'") : "") %>', '<%= (actionUrl != null ? actionUrl.replace("'", "\\'") : "") %>', <%= orderVal %>, <%= enabled %>)">
+                                            Edit
+                                        </button>
+                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete offer: <%= title %>?');">
+                                            <input type="hidden" name="action" value="deleteOffer">
+                                            <input type="hidden" name="id" value="<%= id %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent;">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <%
+                                    }
+                                    if (!hasOffers) {
+                            %>
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No promotional offers created yet.</td>
+                            </tr>
+                            <%
+                                    }
+                                    rs.close();
+                                    st.close();
+                                    con.close();
+                                } catch (Exception e) {
+                                    out.println("<tr><td colspan='8' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
+                                }
+                            %>
+                        </tbody>
+                    </table>
+                    </div>
+
+                  <% } else if ("blog".equalsIgnoreCase(activeTab)) { %>
+                    <!-- ==========================================
+                          BLOG MODERATION CMS TAB
+                          ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Blog Posts & Community Tips Moderation</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Review, hide, show, or delete community routine tips and posts.</p>
+                        </div>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                    <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>Created At</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                try {
+                                    Connection con = DBConnection.getConnection();
+                                    Statement st = con.createStatement();
+                                    ResultSet rs = st.executeQuery("SELECT * FROM blog_submissions ORDER BY created_at DESC");
+                                    boolean hasBlogs = false;
+                                    while (rs.next()) {
+                                        hasBlogs = true;
+                                        int id = rs.getInt("id");
+                                        String title = rs.getString("title");
+                                        String author = rs.getString("author");
+                                        Timestamp createdAt = rs.getTimestamp("created_at");
+                                        int isHidden = rs.getInt("is_hidden");
+                            %>
+                            <tr>
+                                <td style="font-weight:600;"><%= id %></td>
+                                <td style="font-weight:600; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= title %>"><%= title %></td>
+                                <td><%= author %></td>
+                                <td><%= createdAt %></td>
+                                <td>
+                                    <span class="status-badge <%= isHidden == 0 ? "status-completed" : "status-cancelled" %>">
+                                        <%= isHidden == 0 ? "Visible" : "Hidden" %>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                        <form action="AdminServlet" method="POST" style="margin:0;">
+                                            <input type="hidden" name="action" value="toggleBlogVisibility">
+                                            <input type="hidden" name="id" value="<%= id %>">
+                                            <input type="hidden" name="isHidden" value="<%= isHidden == 0 ? 1 : 0 %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem;">
+                                                <%= isHidden == 0 ? "Hide" : "Show" %>
+                                            </button>
+                                        </form>
+                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete blog post: <%= title.replace("'", "\\'") %>?');">
+                                            <input type="hidden" name="action" value="deleteBlogAdmin">
+                                            <input type="hidden" name="id" value="<%= id %>">
+                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent;">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <%
+                                    }
+                                    if (!hasBlogs) {
+                            %>
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No blog posts found.</td>
+                            </tr>
+                            <%
+                                    }
+                                    rs.close();
+                                    st.close();
+                                    con.close();
+                                } catch (Exception e) {
+                                    out.println("<tr><td colspan='6' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
+                                }
+                            %>
+                        </tbody>
+                    </table>
+                    </div>
+
+                  <% } else if ("about".equalsIgnoreCase(activeTab)) { 
+                      Map<String, String> cms = com.mycompany.mavenproject2.CMSHelper.getPageContent("about_");
+                  %>
+                    <!-- ==========================================
+                          ABOUT PAGE CMS TAB
+                          ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">About Page Content Manager</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Edit the public About page hero header, story vision, skin-first formulas, and ethical promise statements.</p>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:35px; box-shadow:var(--shadow-lux); text-align:left;">
+                        <form action="AdminServlet" method="POST">
+                            <input type="hidden" name="action" value="updateAboutPage">
+                            
+                            <h3 style="font-family:'Playfair Display', serif; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px;">Hero Section</h3>
+                            <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-bottom:30px;">
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Hero Title</label>
+                                    <input type="text" name="about_hero_title" value="<%= cms.getOrDefault("about_hero_title", "About LuxeGlow") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Hero Subtitle</label>
+                                    <input type="text" name="about_hero_subtitle" value="<%= cms.getOrDefault("about_hero_subtitle", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                            </div>
+
+                            <h3 style="font-family:'Playfair Display', serif; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px;">Story Content Blocks</h3>
+                            
+                            <div style="margin-bottom:25px;">
+                                <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
+                                    <div class="form-group">
+                                        <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Vision Block Title</label>
+                                        <input type="text" name="about_vision_title" value="<%= cms.getOrDefault("about_vision_title", "Our Vision") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); margin-bottom:10px;">
+                                        <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Vision Block Text</label>
+                                        <textarea name="about_vision_text" rows="4" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); resize:vertical;"><%= cms.getOrDefault("about_vision_text", "") %></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:25px; border-top:1px dashed var(--border-light); padding-top:20px;">
+                                <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
+                                    <div class="form-group">
+                                        <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Formulations Block Title</label>
+                                        <input type="text" name="about_formula_title" value="<%= cms.getOrDefault("about_formula_title", "Skin-First Formulations") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); margin-bottom:10px;">
+                                        <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Formulations Block Text</label>
+                                        <textarea name="about_formula_text" rows="4" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); resize:vertical;"><%= cms.getOrDefault("about_formula_text", "") %></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:30px; border-top:1px dashed var(--border-light); padding-top:20px;">
+                                <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
+                                    <div class="form-group">
+                                        <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Ethical Promise Block Title</label>
+                                        <input type="text" name="about_promise_title" value="<%= cms.getOrDefault("about_promise_title", "Our Ethical Promise") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); margin-bottom:10px;">
+                                        <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Ethical Promise Block Text</label>
+                                        <textarea name="about_promise_text" rows="4" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); resize:vertical;"><%= cms.getOrDefault("about_promise_text", "") %></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-gold" style="width:200px; border-radius:12px; padding:12px 24px; font-weight:600;">
+                                <i class="fas fa-save" style="margin-right:8px;"></i> Save Changes
+                            </button>
+                        </form>
+                    </div>
+
+                  <% } else if ("contact".equalsIgnoreCase(activeTab)) { 
+                      Map<String, String> cms = com.mycompany.mavenproject2.CMSHelper.getPageContent("contact_");
+                  %>
+                    <!-- ==========================================
+                          CONTACT PAGE CMS TAB
+                          ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Contact Page Content Manager</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Edit customer-facing contact details, email addresses, phone lines, and physical headquarters location.</p>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:35px; box-shadow:var(--shadow-lux); text-align:left;">
+                        <form action="AdminServlet" method="POST">
+                            <input type="hidden" name="action" value="updateContactPage">
+                            
+                            <h3 style="font-family:'Playfair Display', serif; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px;">Hero Section</h3>
+                            <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-bottom:30px;">
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Hero Title</label>
+                                    <input type="text" name="contact_hero_title" value="<%= cms.getOrDefault("contact_hero_title", "Get In Touch") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Hero Subtitle</label>
+                                    <input type="text" name="contact_hero_subtitle" value="<%= cms.getOrDefault("contact_hero_subtitle", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                            </div>
+
+                            <h3 style="font-family:'Playfair Display', serif; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px;">Luxury Concierge Section</h3>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:30px;">
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Concierge Title</label>
+                                    <input type="text" name="contact_concierge_title" value="<%= cms.getOrDefault("contact_concierge_title", "Luxury Concierge") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Concierge Subtitle / Description</label>
+                                    <input type="text" name="contact_concierge_subtitle" value="<%= cms.getOrDefault("contact_concierge_subtitle", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                            </div>
+
+                            <h3 style="font-family:'Playfair Display', serif; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px;">Contact Channels</h3>
+                            
+                            <!-- Email Channel -->
+                            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Email Field Title</label>
+                                    <input type="text" name="contact_email_title" value="<%= cms.getOrDefault("contact_email_title", "Email Us") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Email Address</label>
+                                    <input type="email" name="contact_email_value" value="<%= cms.getOrDefault("contact_email_value", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Email Description / Hours</label>
+                                    <input type="text" name="contact_email_desc" value="<%= cms.getOrDefault("contact_email_desc", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                            </div>
+
+                            <!-- Phone Channel -->
+                            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px; margin-bottom:20px; border-top:1px dashed var(--border-light); padding-top:20px;">
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Phone Field Title</label>
+                                    <input type="text" name="contact_call_title" value="<%= cms.getOrDefault("contact_call_title", "Call Us") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Phone Number</label>
+                                    <input type="text" name="contact_call_value" value="<%= cms.getOrDefault("contact_call_value", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Phone Description / Hours</label>
+                                    <input type="text" name="contact_call_desc" value="<%= cms.getOrDefault("contact_call_desc", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                            </div>
+
+                            <!-- HQ Address & Form Title -->
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:30px; border-top:1px dashed var(--border-light); padding-top:20px;">
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">HQ Address Field Title</label>
+                                    <input type="text" name="contact_hq_title" value="<%= cms.getOrDefault("contact_hq_title", "Headquarters") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); margin-bottom:10px;">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">HQ Address Text (Use newline for spacing)</label>
+                                    <textarea name="contact_hq_value" rows="3" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); resize:vertical;"><%= cms.getOrDefault("contact_hq_value", "") %></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Contact Form Title</label>
+                                    <input type="text" name="contact_form_title" value="<%= cms.getOrDefault("contact_form_title", "Send Us a Message") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-gold" style="width:200px; border-radius:12px; padding:12px 24px; font-weight:600;">
+                                <i class="fas fa-save" style="margin-right:8px;"></i> Save Changes
+                            </button>
+                        </form>
+                    </div>
+
+                  <% } else if ("static-pages".equalsIgnoreCase(activeTab)) { 
+                      String pageSelect = request.getParameter("pageSelect");
+                      if (pageSelect == null || pageSelect.trim().isEmpty()) {
+                          pageSelect = "faq_";
+                      }
+                      Map<String, String> cms = com.mycompany.mavenproject2.CMSHelper.getPageContent(pageSelect);
+                  %>
+                    <!-- ==========================================
+                          POLICY PAGES CMS TAB
+                          ========================================== -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; text-align:left;">
+                        <div>
+                            <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Policy Pages CMS Manager</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Select any secondary static or policy page and dynamically modify its header and raw body content.</p>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:35px; box-shadow:var(--shadow-lux); text-align:left;">
+                        <div class="form-group" style="margin-bottom:30px; max-width:400px;">
+                            <label style="font-size:0.9rem; font-weight:700; display:block; margin-bottom:10px; color:var(--gold);">Select Page to Edit</label>
+                            <select id="staticPageSelector" onchange="location.href='admin?tab=static-pages&pageSelect=' + this.value;" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.9rem; font-weight:600;">
+                                <option value="faq_" <%= "faq_".equals(pageSelect) ? "selected" : "" %>>FAQ Page</option>
+                                <option value="privacy_" <%= "privacy_".equals(pageSelect) ? "selected" : "" %>>Privacy Policy</option>
+                                <option value="terms_" <%= "terms_".equals(pageSelect) ? "selected" : "" %>>Terms & Conditions</option>
+                                <option value="shipping_" <%= "shipping_".equals(pageSelect) ? "selected" : "" %>>Shipping & Returns Information</option>
+                                <option value="shipping_policy_" <%= "shipping_policy_".equals(pageSelect) ? "selected" : "" %>>Shipping Policy</option>
+                                <option value="returns_policy_" <%= "returns_policy_".equals(pageSelect) ? "selected" : "" %>>Return & Refund Policy</option>
+                            </select>
+                        </div>
+
+                        <form action="AdminServlet" method="POST">
+                            <input type="hidden" name="action" value="updateStaticPage">
+                            <input type="hidden" name="pagePrefix" value="<%= pageSelect %>">
+
+                            <h3 style="font-family:'Playfair Display', serif; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px;">Page Header</h3>
+                            <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-bottom:30px;">
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Hero Title</label>
+                                    <input type="text" name="hero_title" value="<%= cms.getOrDefault(pageSelect + "hero_title", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Hero Subtitle</label>
+                                    <input type="text" name="hero_subtitle" value="<%= cms.getOrDefault(pageSelect + "hero_subtitle", "") %>" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                                </div>
+                            </div>
+
+                            <h3 style="font-family:'Playfair Display', serif; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px;">Page Body Content (HTML Allowed)</h3>
+                            <div class="form-group" style="margin-bottom:30px;">
+                                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px;">Body HTML Content</label>
+                                <textarea name="content_html" rows="15" required style="width:100%; padding:14px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-family:monospace; font-size:0.85rem; line-height:1.5; resize:vertical;"><%= cms.getOrDefault(pageSelect + "content_html", "") %></textarea>
+                            </div>
+
+                            <button type="submit" class="btn-gold" style="width:200px; border-radius:12px; padding:12px 24px; font-weight:600;">
+                                <i class="fas fa-save" style="margin-right:8px;"></i> Save Changes
+                            </button>
+                        </form>
+                    </div>
+
+                  <% } %>
 
             </main>
         </div>
-    </div>
 
 
     <!-- ==========================================
@@ -2040,6 +3044,24 @@
             </div>
             <button class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:20px; text-transform:none;" onclick="closeOrderDetailsModal()">
                 Close Invoice
+            </button>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL 3B: VIEW REVIEW DETAILS
+         ========================================== -->
+    <div id="reviewDetailsModal" class="modal">
+        <div class="modal-content" style="max-width:550px;">
+            <span class="modal-close" onclick="closeReviewDetailsModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.5rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Customer Feedback Review Details
+            </h3>
+            <div id="reviewDetailsModalBody" style="text-align:left; font-size: 0.9rem; line-height: 1.6;">
+                <!-- Dynamically loaded content -->
+            </div>
+            <button class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:20px; text-transform:none;" onclick="closeReviewDetailsModal()">
+                Close Details
             </button>
         </div>
     </div>
@@ -2324,10 +3346,696 @@
         </div>
     </div>
 
+    <!-- ==================================================
+         MODALS FOR FEATURED MASTERPIECES CMS
+         ================================================== -->
+    <div id="addFeaturedModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeAddFeaturedModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Create Featured Masterpiece Card
+            </h3>
+            <form action="AdminServlet" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="addFeatured">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Card Title</label>
+                    <input type="text" name="title" placeholder="E.g. New Arrivals" required>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Card Description</label>
+                    <textarea name="description" placeholder="Be the first to experience our latest clinical formulas..." required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem;" rows="3"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Card Badge / Tag</label>
+                        <input type="text" name="badge" placeholder="E.g. Fresh Selections" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Link URL</label>
+                        <input type="text" name="linkUrl" placeholder="E.g. new-arrivals.jsp" required>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" value="0" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Upload Card Image</label>
+                    <input type="file" name="cardImage" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:10px;">
+                    Create Featured Card
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editFeaturedModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeEditFeaturedModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Edit Featured Card
+            </h3>
+            <form action="AdminServlet" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="editFeatured">
+                <input type="hidden" name="id" id="editFeaturedId">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Card Title</label>
+                    <input type="text" name="title" id="editFeaturedTitle" required>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Card Description</label>
+                    <textarea name="description" id="editFeaturedDescription" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem;" rows="3"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Card Badge / Tag</label>
+                        <input type="text" name="badge" id="editFeaturedBadge" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Link URL</label>
+                        <input type="text" name="linkUrl" id="editFeaturedLinkUrl" required>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" id="editFeaturedDisplayOrder" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" id="editFeaturedIsEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:10px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Current Card Image</label>
+                    <img id="editFeaturedImagePreview" src="" style="max-height:80px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); display:block; margin-bottom:10px;">
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Replace Image (Optional)</label>
+                    <input type="file" name="cardImage" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================================================
+         MODALS FOR TESTIMONIALS CMS
+         ================================================== -->
+    <div id="addTestimonialModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeAddTestimonialModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Create Client Testimonial
+            </h3>
+            <form action="AdminServlet" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="addTestimonial">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Client Name / Location</label>
+                    <input type="text" name="clientName" placeholder="E.g. Elena R., New York" required>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Testimonial Review Text</label>
+                    <textarea name="reviewText" placeholder="The Glow Serum is an absolute game-changer..." required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem;" rows="4"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Rating Stars (1-5)</label>
+                        <select name="rating" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="5">5 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="2">2 Stars</option>
+                            <option value="1">1 Star</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" value="0" required>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Upload Client Image (Optional)</label>
+                    <input type="file" name="clientImage" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:10px;">
+                    Create Testimonial
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editTestimonialModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeEditTestimonialModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Edit Client Testimonial
+            </h3>
+            <form action="AdminServlet" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="editTestimonial">
+                <input type="hidden" name="id" id="editTestimonialId">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Client Name / Location</label>
+                    <input type="text" name="clientName" id="editTestimonialClientName" required>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Testimonial Review Text</label>
+                    <textarea name="reviewText" id="editTestimonialReviewText" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem;" rows="4"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Rating Stars (1-5)</label>
+                        <select name="rating" id="editTestimonialRating" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="5">5 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="2">2 Stars</option>
+                            <option value="1">1 Star</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" id="editTestimonialDisplayOrder" required>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" id="editTestimonialIsEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:10px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Current Client Image</label>
+                    <img id="editTestimonialImagePreview" src="" style="max-height:80px; width:80px; object-fit:cover; border-radius:50%; border:1px solid var(--border-color); display:block; margin-bottom:10px;">
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Replace Client Image (Optional)</label>
+                    <input type="file" name="clientImage" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================================================
+         MODALS FOR NEW ARRIVALS CMS
+         ================================================== -->
+    <div id="addNewArrivalModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeAddNewArrivalModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Add Product to New Arrivals
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="addNewArrival">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Select Product</label>
+                    <select name="productId" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                        <% for (java.util.Map<String, Object> prod : allOtherProducts) { %>
+                            <option value="<%= prod.get("id") %>"><%= prod.get("name") %></option>
+                        <% } %>
+                    </select>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" value="<%= newArrivalsCount + 1 %>" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Add to New Arrivals
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editNewArrivalModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeEditNewArrivalModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Edit New Arrival Configuration
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="editNewArrival">
+                <input type="hidden" name="productId" id="editNewArrivalProductId">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Product Name</label>
+                    <input type="text" id="editNewArrivalProductName" readonly style="background:var(--bg-dark); opacity:0.7;">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" id="editNewArrivalDisplayOrder" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0;">Activation Status</label>
+                        <select name="isEnabled" id="editNewArrivalIsEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Save Configuration
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="replaceNewArrivalModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeReplaceNewArrivalModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Replace New Arrival Product
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="replaceNewArrival">
+                <input type="hidden" name="oldProductId" id="replaceNewArrivalOldProductId">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Replacing Product</label>
+                    <input type="text" id="replaceNewArrivalOldProductName" readonly style="background:var(--bg-dark); opacity:0.7;">
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Select Replacement Product</label>
+                    <select name="newProductId" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                        <% for (java.util.Map<String, Object> prod : allOtherProducts) { %>
+                            <option value="<%= prod.get("id") %>"><%= prod.get("name") %></option>
+                        <% } %>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Replace Product
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================================================
+         MODALS FOR BEST SELLERS CMS
+         ================================================== -->
+    <div id="addBestSellerModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeAddBestSellerModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Add Product to Best Sellers
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="addBestSeller">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Select Product</label>
+                    <select name="productId" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                        <% for (java.util.Map<String, Object> prod : allOtherBestSellers) { %>
+                            <option value="<%= prod.get("id") %>"><%= prod.get("name") %></option>
+                        <% } %>
+                    </select>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" value="<%= existingBestSellers.size() + 1 %>" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Add to Best Sellers
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editBestSellerModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeEditBestSellerModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Edit Best Seller Configuration
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="editBestSeller">
+                <input type="hidden" name="productId" id="editBestSellerProductId">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Product Name</label>
+                    <input type="text" id="editBestSellerProductName" readonly style="background:var(--bg-dark); opacity:0.7;">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" id="editBestSellerDisplayOrder" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0;">Activation Status</label>
+                        <select name="isEnabled" id="editBestSellerIsEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Save Configuration
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="replaceBestSellerModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeReplaceBestSellerModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Replace Best Seller Product
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="replaceBestSeller">
+                <input type="hidden" name="oldProductId" id="replaceBestSellerOldProductId">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Replacing Product</label>
+                    <input type="text" id="replaceBestSellerOldProductName" readonly style="background:var(--bg-dark); opacity:0.7;">
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Select Replacement Product</label>
+                    <select name="newProductId" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                        <% for (java.util.Map<String, Object> prod : allOtherBestSellers) { %>
+                            <option value="<%= prod.get("id") %>"><%= prod.get("name") %></option>
+                        <% } %>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Replace Product
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================================================
+         MODALS FOR OFFERS CMS
+         ================================================== -->
+    <div id="addOfferModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeAddOfferModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Create Promotion Offer
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="addOffer">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Offer Title</label>
+                    <input type="text" name="title" placeholder="E.g. The Glow Bundle" required>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Offer Description</label>
+                    <textarea name="description" placeholder="Description of the offer..." required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem;" rows="3"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Tag / Badge</label>
+                        <input type="text" name="badge" placeholder="E.g. BOGO 50%, Free Gift">
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Promo Code (Optional)</label>
+                        <input type="text" name="promoCode" placeholder="E.g. GLOW15">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Button CTA Text (Optional)</label>
+                        <input type="text" name="buttonText" placeholder="E.g. Claim Bundle">
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">CTA Target Link (Optional)</label>
+                        <input type="text" name="actionUrl" placeholder="E.g. product.jsp?category=serums">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" value="0" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Create Offer
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editOfferModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="modal-close" onclick="closeEditOfferModal()">&times;</span>
+            <h3 style="font-family:'Playfair Display', serif; font-size:1.4rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
+                Edit Promotion Offer
+            </h3>
+            <form action="AdminServlet" method="POST">
+                <input type="hidden" name="action" value="editOffer">
+                <input type="hidden" name="id" id="editOfferId">
+                
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Offer Title</label>
+                    <input type="text" name="title" id="editOfferTitle" required>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:15px;">
+                    <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Offer Description</label>
+                    <textarea name="description" id="editOfferDescription" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem;" rows="3"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Tag / Badge</label>
+                        <input type="text" name="badge" id="editOfferBadge">
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Promo Code (Optional)</label>
+                        <input type="text" name="promoCode" id="editOfferPromoCode">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Button CTA Text (Optional)</label>
+                        <input type="text" name="buttonText" id="editOfferButtonText">
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">CTA Target Link (Optional)</label>
+                        <input type="text" name="actionUrl" id="editOfferActionUrl">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Display Order</label>
+                        <input type="number" name="displayOrder" id="editOfferDisplayOrder" required>
+                    </div>
+                    <div class="form-group" style="text-align:left; margin-bottom:0;">
+                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px;">Activation Status</label>
+                        <select name="isEnabled" id="editOfferIsEnabled" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary);">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-gold" style="width:100%; border-radius:12px; padding:12px;">
+                    Save Configuration
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Footer -->
     <%@ include file="../footer.jsp" %>
 
     <script>
+        function openReviewDetailsModal(prodName, prodImg, revName, rating, comment, date, status) {
+            const body = document.getElementById('reviewDetailsModalBody');
+            let starsHtml = '';
+            for (let i = 0; i < 5; i++) {
+                starsHtml += i < rating ? '<i class="fas fa-star" style="color:var(--gold); margin-right:3px;"></i>' : '<i class="far fa-star" style="color:var(--text-muted); margin-right:3px;"></i>';
+            }
+            
+            let statusClass = status === 'APPROVED' ? 'status-completed' : 'status-cancelled';
+            let statusText = status === 'APPROVED' ? 'Approved / Visible' : 'Hidden';
+            
+            body.innerHTML = `
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px; border-bottom:1px solid var(--border-light); padding-bottom:15px;">
+                    <img src="${prodImg}" style="width:60px; height:60px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); background:var(--bg-dark);">
+                    <div>
+                        <span style="font-size:0.75rem; font-weight:700; color:var(--gold); text-transform:uppercase;">Product</span>
+                        <div style="font-weight:600; font-family:\'Playfair Display\', serif; font-size:1.1rem; color:var(--burgundy);">${prodName}</div>
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+                    <div>
+                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Reviewer</span>
+                        <strong style="font-size:0.95rem;">${revName}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Date Submitted</span>
+                        <span style="font-size:0.95rem;">${date}</span>
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px; border-bottom:1px solid var(--border-light); padding-bottom:15px;">
+                    <div>
+                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Rating Score</span>
+                        <div style="margin-top:4px;">${starsHtml}</div>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Moderation Status</span>
+                        <span class="status-badge ${statusClass}" style="display:inline-block; margin-top:4px; font-size:0.75rem; padding:4px 10px; border-radius:20px;">${statusText}</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:6px;">Review Content</span>
+                    <div style="background:var(--bg-dark); border:1px solid var(--border-color); padding:15px; border-radius:12px; color:var(--text-primary); font-size:0.9rem; font-style:italic; white-space:pre-wrap;">"${comment}"</div>
+                </div>
+            `;
+            
+            document.getElementById('reviewDetailsModal').style.display = 'flex';
+        }
+        function closeReviewDetailsModal() {
+            document.getElementById('reviewDetailsModal').style.display = 'none';
+        }
+        function filterReviewsTable() {
+            const searchQuery = document.getElementById('reviewSearchInput').value.toLowerCase().trim();
+            const ratingFilter = document.getElementById('reviewRatingFilter').value;
+            const statusFilter = document.getElementById('reviewStatusFilter').value;
+            const dateFilter = document.getElementById('reviewDateFilter').value;
+            
+            const rows = document.querySelectorAll('.review-table-row');
+            const now = Date.now();
+            
+            rows.forEach(row => {
+                const prodName = row.getAttribute('data-product-name');
+                const revName = row.getAttribute('data-reviewer-name');
+                const comment = row.getAttribute('data-comment');
+                const rating = row.getAttribute('data-rating');
+                const status = row.getAttribute('data-status');
+                const time = parseInt(row.getAttribute('data-time'));
+                
+                const matchesSearch = searchQuery === "" || 
+                                      prodName.includes(searchQuery) || 
+                                      revName.includes(searchQuery) || 
+                                      comment.includes(searchQuery);
+                                      
+                const matchesRating = ratingFilter === "ALL" || rating === ratingFilter;
+                const matchesStatus = statusFilter === "ALL" || status === statusFilter;
+                
+                let matchesDate = true;
+                if (dateFilter === "TODAY") {
+                    matchesDate = (now - time) <= 24 * 60 * 60 * 1000;
+                } else if (dateFilter === "7DAYS") {
+                    matchesDate = (now - time) <= 7 * 24 * 60 * 60 * 1000;
+                } else if (dateFilter === "30DAYS") {
+                    matchesDate = (now - time) <= 30 * 24 * 60 * 60 * 1000;
+                }
+                
+                if (matchesSearch && matchesRating && matchesStatus && matchesDate) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
         // Modal toggles
         function openAddModal() {
             document.getElementById('addModal').style.display = 'flex';
@@ -2425,22 +4133,137 @@
 
         // Close modal on outer clicks
         window.onclick = function(event) {
-            const addM = document.getElementById('addModal');
-            const editM = document.getElementById('editModal');
-            const detailsM = document.getElementById('orderDetailsModal');
-            const addVarM = document.getElementById('addVariantModal');
-            const editVarM = document.getElementById('editVariantModal');
-            const galleryM = document.getElementById('manageGalleryModal');
-            const addPromoM = document.getElementById('addPromotionModal');
-            const addCouponM = document.getElementById('addCouponModal');
-            if (event.target == addM) addM.style.display = 'none';
-            if (event.target == editM) editM.style.display = 'none';
-            if (event.target == detailsM) detailsM.style.display = 'none';
-            if (event.target == addVarM) addVarM.style.display = 'none';
-            if (event.target == editVarM) editVarM.style.display = 'none';
-            if (event.target == galleryM) galleryM.style.display = 'none';
-            if (event.target == addPromoM) addPromoM.style.display = 'none';
-            if (event.target == addCouponM) addCouponM.style.display = 'none';
+            if (event.target && event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Modals for New Arrivals
+        function openAddNewArrivalModal() {
+            document.getElementById('addNewArrivalModal').style.display = 'flex';
+        }
+        function closeAddNewArrivalModal() {
+            document.getElementById('addNewArrivalModal').style.display = 'none';
+        }
+        function openEditNewArrivalModal(productId, productName, displayOrder, isEnabled) {
+            document.getElementById('editNewArrivalProductId').value = productId;
+            document.getElementById('editNewArrivalProductName').value = productName;
+            document.getElementById('editNewArrivalDisplayOrder').value = displayOrder;
+            document.getElementById('editNewArrivalIsEnabled').value = isEnabled;
+            document.getElementById('editNewArrivalModal').style.display = 'flex';
+        }
+        function closeEditNewArrivalModal() {
+            document.getElementById('editNewArrivalModal').style.display = 'none';
+        }
+        function openReplaceNewArrivalModal(productId, productName) {
+            document.getElementById('replaceNewArrivalOldProductId').value = productId;
+            document.getElementById('replaceNewArrivalOldProductName').value = productName;
+            document.getElementById('replaceNewArrivalModal').style.display = 'flex';
+        }
+        function closeReplaceNewArrivalModal() {
+            document.getElementById('replaceNewArrivalModal').style.display = 'none';
+        }
+
+        // Modals for Best Sellers
+        function openAddBestSellerModal() {
+            document.getElementById('addBestSellerModal').style.display = 'flex';
+        }
+        function closeAddBestSellerModal() {
+            document.getElementById('addBestSellerModal').style.display = 'none';
+        }
+        function openEditBestSellerModal(productId, productName, displayOrder, isEnabled) {
+            document.getElementById('editBestSellerProductId').value = productId;
+            document.getElementById('editBestSellerProductName').value = productName;
+            document.getElementById('editBestSellerDisplayOrder').value = displayOrder;
+            document.getElementById('editBestSellerIsEnabled').value = isEnabled;
+            document.getElementById('editBestSellerModal').style.display = 'flex';
+        }
+        function closeEditBestSellerModal() {
+            document.getElementById('editBestSellerModal').style.display = 'none';
+        }
+        function openReplaceBestSellerModal(productId, productName) {
+            document.getElementById('replaceBestSellerOldProductId').value = productId;
+            document.getElementById('replaceBestSellerOldProductName').value = productName;
+            document.getElementById('replaceBestSellerModal').style.display = 'flex';
+        }
+        function closeReplaceBestSellerModal() {
+            document.getElementById('replaceBestSellerModal').style.display = 'none';
+        }
+
+        // Modals for Offers
+        function openAddOfferModal() {
+            document.getElementById('addOfferModal').style.display = 'flex';
+        }
+        function closeAddOfferModal() {
+            document.getElementById('addOfferModal').style.display = 'none';
+        }
+        function openEditOfferModal(id, title, description, badge, promoCode, buttonText, actionUrl, displayOrder, isEnabled) {
+            document.getElementById('editOfferId').value = id;
+            document.getElementById('editOfferTitle').value = title;
+            document.getElementById('editOfferDescription').value = description;
+            document.getElementById('editOfferBadge').value = badge;
+            document.getElementById('editOfferPromoCode').value = promoCode;
+            document.getElementById('editOfferButtonText').value = buttonText;
+            document.getElementById('editOfferActionUrl').value = actionUrl;
+            document.getElementById('editOfferDisplayOrder').value = displayOrder;
+            document.getElementById('editOfferIsEnabled').value = isEnabled;
+            document.getElementById('editOfferModal').style.display = 'flex';
+        }
+        function closeEditOfferModal() {
+            document.getElementById('editOfferModal').style.display = 'none';
+        }
+
+        function openAddFeaturedModal() {
+            document.getElementById('addFeaturedModal').style.display = 'flex';
+        }
+        function closeAddFeaturedModal() {
+            document.getElementById('addFeaturedModal').style.display = 'none';
+        }
+        function openEditFeaturedModal(id, title, desc, img, badge, linkUrl, order, enabled) {
+            document.getElementById('editFeaturedId').value = id;
+            document.getElementById('editFeaturedTitle').value = title;
+            document.getElementById('editFeaturedDescription').value = desc;
+            document.getElementById('editFeaturedBadge').value = badge;
+            document.getElementById('editFeaturedLinkUrl').value = linkUrl;
+            document.getElementById('editFeaturedDisplayOrder').value = order;
+            document.getElementById('editFeaturedIsEnabled').value = enabled;
+            const preview = document.getElementById('editFeaturedImagePreview');
+            if (img && img.trim() !== '') {
+                preview.src = img;
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+            document.getElementById('editFeaturedModal').style.display = 'flex';
+        }
+        function closeEditFeaturedModal() {
+            document.getElementById('editFeaturedModal').style.display = 'none';
+        }
+
+        function openAddTestimonialModal() {
+            document.getElementById('addTestimonialModal').style.display = 'flex';
+        }
+        function closeAddTestimonialModal() {
+            document.getElementById('addTestimonialModal').style.display = 'none';
+        }
+        function openEditTestimonialModal(id, name, text, img, rating, order, enabled) {
+            document.getElementById('editTestimonialId').value = id;
+            document.getElementById('editTestimonialClientName').value = name;
+            document.getElementById('editTestimonialReviewText').value = text;
+            document.getElementById('editTestimonialRating').value = rating;
+            document.getElementById('editTestimonialDisplayOrder').value = order;
+            document.getElementById('editTestimonialIsEnabled').value = enabled;
+            const preview = document.getElementById('editTestimonialImagePreview');
+            if (img && img.trim() !== '') {
+                preview.src = img;
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+            document.getElementById('editTestimonialModal').style.display = 'flex';
+        }
+        function closeEditTestimonialModal() {
+            document.getElementById('editTestimonialModal').style.display = 'none';
         }
 
         // --- NEW MODAL ACTIONS ---
