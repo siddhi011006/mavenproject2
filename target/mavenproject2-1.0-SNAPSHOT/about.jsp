@@ -14,7 +14,7 @@
     <%@ include file="navbar.jsp" %>
 
     <!-- Hero Header -->
-    <section class="hero" style="height: 35vh; min-height: 250px;">
+    <section class="hero" style="height: 35vh; min-height: 250px; background: linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88)), url('<%= heroConfigProps.getProperty("about", "image/bc2.jpg") %>') no-repeat center center/cover;">
         <div class="hero-content">
             <h1 style="font-size: 2.8rem;">About LuxeGlow</h1>
             <p>We are a modern, minimal, skin-first beauty experience designed for a radiant future.</p>

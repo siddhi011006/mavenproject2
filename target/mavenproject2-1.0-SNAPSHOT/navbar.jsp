@@ -1,5 +1,35 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%
+    java.util.Properties heroConfigProps = new java.util.Properties();
+    try {
+        String hcPath = application.getRealPath("/WEB-INF/hero_config.properties");
+        if (hcPath != null) {
+            java.io.File hcf = new java.io.File(hcPath);
+            if (hcf.exists()) {
+                try (java.io.FileInputStream fis = new java.io.FileInputStream(hcf)) {
+                    heroConfigProps.load(fis);
+                }
+            }
+        }
+        // Fallback for home hero from hero_config.txt if properties doesn't contain it
+        if (!heroConfigProps.containsKey("home")) {
+            String txtPath = application.getRealPath("/WEB-INF/hero_config.txt");
+            if (txtPath != null) {
+                java.io.File txtFile = new java.io.File(txtPath);
+                if (txtFile.exists()) {
+                    try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(txtFile))) {
+                        String line = br.readLine();
+                        if (line != null && !line.trim().isEmpty()) {
+                            heroConfigProps.setProperty("home", line.trim());
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
     String currentCountry = "India";
     if (session != null && session.getAttribute("selected_country") != null) {
         currentCountry = (String) session.getAttribute("selected_country");

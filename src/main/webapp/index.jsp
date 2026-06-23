@@ -55,23 +55,7 @@
 
     <!-- Hero Banner -->
     <%
-        String customHeroImage = "image/bc2.jpg"; // Default fallback
-        try {
-            String configPath = application.getRealPath("/WEB-INF/hero_config.txt");
-            if (configPath != null) {
-                java.io.File cf = new java.io.File(configPath);
-                if (cf.exists()) {
-                    try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(cf))) {
-                        String line = br.readLine();
-                        if (line != null && !line.trim().isEmpty()) {
-                            customHeroImage = line.trim();
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        String customHeroImage = heroConfigProps.getProperty("home", "image/bc2.jpg");
     %>
     <section class="hero" style="background: linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88)), url('<%= customHeroImage %>') no-repeat center center/cover;">
         <div class="hero-content">

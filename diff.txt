@@ -1,0 +1,238 @@
+﻿diff --git a/src/main/webapp/WEB-INF/admin-dashboard.jsp b/src/main/webapp/WEB-INF/admin-dashboard.jsp
+index 4bf83b7..3421c3f 100644
+--- a/src/main/webapp/WEB-INF/admin-dashboard.jsp
++++ b/src/main/webapp/WEB-INF/admin-dashboard.jsp
+@@ -1731,107 +1731,159 @@
+                                 }
+                             %>
+                         </tbody>
+-                    </table>
+-                    </div>
++                                      <% } else if ("hero".equalsIgnoreCase(activeTab)) { 
++                        java.util.Properties adminHeroProps = new java.util.Properties();
++                        try {
++                            String hcPath = application.getRealPath("/WEB-INF/hero_config.properties");
++                            if (hcPath != null) {
++                                java.io.File hcf = new java.io.File(hcPath);
++                                if (hcf.exists()) {
++                                    try (java.io.FileInputStream fis = new java.io.FileInputStream(hcf)) {
++                                        adminHeroProps.load(fis);
++                                    }
++                                }
++                            }
++                        } catch (Exception e) {
++                            e.printStackTrace();
++                        }
+ 
+-                 <% } else if ("hero".equalsIgnoreCase(activeTab)) { %>
++                        String[][] pagesMeta = {
++                            {"home", "Home Page Hero", "image/bc2.jpg", "Glow Like Never Before", "Dermatologist-tested luxury formulations."},
++                            {"shop", "Shop Page Hero", "image/silkfoundation.jpg", "Luxury Beauty Collection", "Editorial elegance. Modern science."},
++                            {"about", "About Page Hero", "image/bc2.jpg", "About LuxeGlow", "We are a modern, minimal skin-first experience."},
++                            {"contact", "Contact Page Hero", "image/bc2.jpg", "Get In Touch", "Have questions? Our experts are here to assist."},
++                            {"offers", "Offers Page Hero", "image/bc2.jpg", "LuxeGlow Offers", "Unlock limited-time discounts on luxury cosmetics."},
++                            {"faq", "FAQ Page Hero", "image/bc2.jpg", "Client FAQs", "Answers to your questions about our luxury formulas."},
++                            {"privacy", "Privacy Policy Hero", "image/bc2.jpg", "Privacy Policy", "Your privacy and safety are extremely important."},
++                            {"terms", "Terms Page Hero", "image/bc2.jpg", "Terms & Conditions", "Please review our client usage guidelines."},
++                            {"shipping", "Shipping & Returns Hero", "image/bc2.jpg", "Shipping & Returns", "Read about our global shipping times."},
++                            {"shipping-policy", "Shipping Policy Hero", "image/bc2.jpg", "Shipping Policy", "Read about our standard rates and couriers."},
++                            {"returns-policy", "Returns Policy Hero", "image/bc2.jpg", "Return & Refund Policy", "Our commitment to your satisfaction."}
++                        };
++                  %>
+                     <!-- ==========================================
+-                         HERO SECTION MANAGEMENT
+-                         ========================================== -->
++                          HERO SECTION MANAGEMENT
++                          ========================================== -->
+                     <div style="text-align:left; margin-bottom:25px;">
+                         <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Hero Banner Management</h2>
+-                        <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Upload, replace, delete, and manage the website's homepage hero banner image.</p>
++                        <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Upload, replace, delete, and manage custom hero banner images for each page independently.</p>
+                     </div>
+ 
+-                    <div class="admin-two-col-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 30px; margin-top: 20px;">
+-                        <!-- Left Column: Preview & Upload Controls -->
+-                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux); text-align:left;">
+-                            <h3 style="font-size:1.3rem; margin-bottom:20px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;">Upload & Replace Banner</h3>
+-                            
+-                            <form action="AdminServlet" method="POST" enctype="multipart/form-data">
++                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 20px;">
++                        <%
++                            String pageSelectParam = request.getParameter("pageSelect");
++                            for (String[] pageMeta : pagesMeta) {
++                                String pageKey = pageMeta[0];
++                                String pageTitle = pageMeta[1];
++                                String defaultImg = pageMeta[2];
++                                String heading = pageMeta[3];
++                                String subtitle = pageMeta[4];
++
++                                String currentImg = null;
++                                boolean isCustom = false;
++                                if (adminHeroProps.containsKey(pageKey)) {
++                                    currentImg = adminHeroProps.getProperty(pageKey);
++                                    isCustom = true;
++                                } else if ("home".equals(pageKey)) {
++                                    try {
++                                        String configPath = application.getRealPath("/WEB-INF/hero_config.txt");
++                                        if (configPath != null) {
++                                            java.io.File cf = new java.io.File(configPath);
++                                            if (cf.exists()) {
++                                                try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(cf))) {
++                                                    String line = br.readLine();
++                                                    if (line != null && !line.trim().isEmpty()) {
++                                                        currentImg = line.trim();
++                                                        isCustom = true;
++                                                    }
++                                                }
++                                            }
++                                        }
++                                    } catch (Exception e) {}
++                                }
++
++                                if (currentImg == null) {
++                                    currentImg = defaultImg;
++                                }
++
++                                boolean isJustUpdated = pageSelectParam != null && pageSelectParam.equals(pageKey);
++                                boolean isDarkText = !"shop".equals(pageKey);
++                                String headingColor = isDarkText ? "var(--burgundy)" : "#FFFFFF";
++                                String subColor = isDarkText ? "var(--text-secondary)" : "#FAF6F4";
++                                String overlayBg = isDarkText ? "linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88))" : "linear-gradient(rgba(0,0,0,0.1), rgba(92,13,30,0.3))";
++                        %>
++                        <div style="background:var(--bg-card); border: <%= isJustUpdated ? "2px solid var(--gold)" : "1px solid var(--border-color)" %>; border-radius:24px; padding:20px; box-shadow: <%= isJustUpdated ? "var(--shadow-gold)" : "var(--shadow-lux)" %>; display:flex; flex-direction:column; justify-content:space-between; text-align:left; position: relative; transition: var(--transition);">
++                            <% if (isJustUpdated) { %>
++                                <span style="position: absolute; top: 12px; right: 12px; background: var(--gold); color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 20px; letter-spacing: 0.5px; z-index: 10;">JUST UPDATED</span>
++                            <% } %>
++                            <div>
++                                <h3 style="font-size:1.15rem; margin-bottom:12px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;"><%= pageTitle %></h3>
++                                
++                                <!-- Card Live Preview -->
++                                <div style="position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); width: 100%; height: 130px; background: #FAF8F5; margin-bottom: 15px;">
++                                    <img id="preview-<%= pageKey %>" src="<%= currentImg %>?t=<%= System.currentTimeMillis() %>" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">
++                                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: <%= overlayBg %>; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px;">
++                                        <div style="transform: scale(0.5); width: 100%;">
++                                            <h1 style="font-size: 1.8rem; line-height: 1.2; margin-bottom: 4px; color: <%= headingColor %>; font-family:'Playfair Display', serif; font-weight:700;"><%= heading %></h1>
++                                            <p style="font-size: 0.75rem; color: <%= subColor %>; margin-bottom: 0; font-family:'Outfit', sans-serif;"><%= subtitle %></p>
++                                        </div>
++                                    </div>
++                                </div>
++                            </div>
++
++                            <form action="AdminServlet" method="POST" enctype="multipart/form-data" style="margin-top: auto;">
+                                 <input type="hidden" name="action" value="updateHeroBanner">
++                                <input type="hidden" name="heroPage" value="<%= pageKey %>">
+                                 
+-                                <div style="margin-bottom: 25px;">
+-                                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">Select Hero Image File</label>
+-                                    <input type="file" id="heroImageFile" name="heroImageFile" accept="image/*" onchange="previewHeroImage(event)" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-primary); cursor: pointer;">
+-                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">Recommended resolution: 1920x800. Formats: JPG, PNG, WEBP.</p>
++                                <div style="margin-bottom: 15px;">
++                                    <input type="file" name="heroImageFile" accept="image/*" onchange="previewHeroCard(this, '<%= pageKey %>')" required style="width: 100%; padding: 6px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-primary); cursor: pointer; font-size: 0.75rem;">
+                                 </div>
+                                 
+-                                <div style="display: flex; gap: 12px; margin-top: 20px;">
+-                                    <button type="submit" class="btn-gold" style="border-radius:12px; padding:10px 24px; flex-grow: 1;">
+-                                        <i class="fas fa-save" style="margin-right: 8px;"></i> Save Banner
++                                <div style="display: flex; gap: 8px;">
++                                    <button type="submit" class="btn-gold" style="border-radius:8px; padding:8px 16px; font-size:0.75rem; flex-grow: 1;">
++                                        <i class="fas fa-save" style="margin-right: 5px;"></i> Save
+                                     </button>
+-                                    
+-                                    <%
+-                                        String tempHero = "image/bc2.jpg";
+-                                        boolean hasCustomHero = false;
+-                                        try {
+-                                            String configPath = application.getRealPath("/WEB-INF/hero_config.txt");
+-                                            if (configPath != null) {
+-                                                java.io.File cf = new java.io.File(configPath);
+-                                                if (cf.exists()) {
+-                                                    try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(cf))) {
+-                                                        String line = br.readLine();
+-                                                        if (line != null && !line.trim().isEmpty()) {
+-                                                            tempHero = line.trim();
+-                                                            hasCustomHero = true;
+-                                                        }
+-                                                    }
+-                                                }
+-                                            }
+-                                        } catch (Exception e) {}
+-                                        if (hasCustomHero) {
+-                                    %>
+-                                        <button type="button" class="btn-outline" style="border-radius:12px; padding:10px 24px; color: var(--danger); border-color: var(--danger); background: transparent;" onclick="if(confirm('Delete custom hero banner and revert to default?')) document.getElementById('deleteHeroForm').submit();">
+-                                            <i class="fas fa-trash-alt" style="margin-right: 8px;"></i> Revert to Default
++                                    <% if (isCustom) { %>
++                                        <button type="button" class="btn-outline" style="border-radius:8px; padding:8px 16px; font-size:0.75rem; color: var(--danger); border-color: var(--danger); background: transparent;" onclick="deleteHeroBannerCard('<%= pageKey %>')">
++                                            <i class="fas fa-trash-alt" style="margin-right: 5px;"></i> Revert
+                                         </button>
+                                     <% } %>
+                                 </div>
+                             </form>
+-                            
+-                            <form id="deleteHeroForm" action="AdminServlet" method="POST" style="display:none;">
+-                                <input type="hidden" name="action" value="deleteHeroBanner">
+-                            </form>
+-                        </div>
+-                        
+-                        <!-- Right Column: Interactive Banner Preview -->
+-                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux); display: flex; flex-direction: column; justify-content: space-between;">
+-                            <div>
+-                                <h3 style="font-size:1.3rem; margin-bottom:10px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;">Live Preview</h3>
+-                                <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom: 20px;">Review your selection below before applying changes to the site.</p>
+-                            </div>
+-                            
+-                            <div style="position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); width: 100%; padding-top: 50%; background: #FAF8F5;">
+-                                <img id="heroPreviewDisplay" src="<%= tempHero %>?t=<%= System.currentTimeMillis() %>" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">
+-                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88)); display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px;">
+-                                    <div style="transform: scale(0.6);">
+-                                        <h1 style="font-size: 2.2rem; line-height: 1.2; margin-bottom: 8px; color: var(--burgundy); font-family:'Playfair Display', serif; font-weight:700;">Glow Like Never Before</h1>
+-                                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px;">Dermatologist-tested luxury formulations.</p>
+-                                        <span class="btn-gold" style="padding: 6px 12px; font-size: 0.6rem; pointer-events: none;">Explore Collection</span>
+-                                    </div>
+-                                </div>
+-                            </div>
+-                            
+-                            <div style="font-size:0.75rem; color:var(--text-muted); margin-top: 15px; text-align: center;">
+-                                <i class="fas fa-info-circle" style="color:var(--gold); margin-right:5px;"></i> Preview displays a miniature mock of the home banner overlay.
+-                            </div>
+                         </div>
++                        <%
++                            }
++                        %>
+                     </div>
+ 
++                    <!-- Global Hidden Delete Form -->
++                    <form id="globalDeleteHeroForm" action="AdminServlet" method="POST" style="display:none;">
++                        <input type="hidden" name="action" value="deleteHeroBanner">
++                        <input type="hidden" name="heroPage" value="">
++                    </form>
++
+                     <script>
+-                        function previewHeroImage(event) {
+-                            const input = event.target;
++                        function previewHeroCard(input, pageKey) {
+                             if (input.files && input.files[0]) {
+                                 const reader = new FileReader();
+                                 reader.onload = function(e) {
+-                                    const preview = document.getElementById('heroPreviewDisplay');
+-                                    preview.src = e.target.result;
++                                    const preview = document.getElementById('preview-' + pageKey);
++                                    if (preview) {
++                                        preview.src = e.target.result;
++                                    }
+                                 }
+                                 reader.readAsDataURL(input.files[0]);
+                             }
+                         }
+-                    </script>
+ 
++                        function deleteHeroBannerCard(pageKey) {
++                            if (confirm('Delete custom hero banner for ' + pageKey + ' and revert to default?')) {
++                                const form = document.getElementById('globalDeleteHeroForm');
++                                form.querySelector('input[name="heroPage"]').value = pageKey;
++                                form.submit();
++                            }
++                        }
++                    </script>
+                  <% } %>
+ 
+             </main>

@@ -198,7 +198,10 @@
     %>
 
     <!-- Hero Header -->
-    <section class="hero" style="height: 35vh; min-height: 250px; background: linear-gradient(rgba(0,0,0,0.1), rgba(92,13,30,0.3)), url('image/silkfoundation.jpg') no-repeat center center/cover; display:flex; align-items:center; justify-content:center; text-align:center;">
+    <%
+        String shopHeroImage = heroConfigProps.getProperty("shop", "image/silkfoundation.jpg");
+    %>
+    <section class="hero" style="height: 35vh; min-height: 250px; background: linear-gradient(rgba(0,0,0,0.1), rgba(92,13,30,0.3)), url('<%= shopHeroImage %>') no-repeat center center/cover; display:flex; align-items:center; justify-content:center; text-align:center;">
         <div class="hero-content">
             <h1 style="font-size: 2.8rem; color: #FFFFFF; font-family:'Playfair Display', serif;">Luxury Beauty Collection</h1>
             <p style="color: #FAF6F4; font-size: 1rem; margin-top:10px;">Editorial elegance. Modern science. Soft luxury.</p>

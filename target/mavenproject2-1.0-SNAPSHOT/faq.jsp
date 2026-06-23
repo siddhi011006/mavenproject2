@@ -14,7 +14,7 @@
     <%@ include file="navbar.jsp" %>
 
     <!-- Hero Header -->
-    <section class="hero" style="height: 30vh; min-height: 200px;">
+    <section class="hero" style="height: 30vh; min-height: 200px; background: linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88)), url('<%= heroConfigProps.getProperty("faq", "image/bc2.jpg") %>') no-repeat center center/cover;">
         <div class="hero-content">
             <h1 style="font-size: 2.5rem;">Client FAQs</h1>
             <p>Answers to your questions about our luxury formulas, order delivery, and shade matching.</p>

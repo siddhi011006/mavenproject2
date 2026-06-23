@@ -974,8 +974,12 @@ public class AdminServlet extends HttpServlet {
                 }
 
             } else if ("updateHeroBanner".equalsIgnoreCase(action)) {
+                String heroPage = request.getParameter("heroPage");
+                if (heroPage == null || heroPage.trim().isEmpty()) {
+                    heroPage = "home";
+                }
                 Part filePart = request.getPart("heroImageFile");
-                String redirectDest = "admin?tab=hero";
+                String redirectDest = "admin?tab=hero&pageSelect=" + heroPage;
                 if (filePart != null && filePart.getSize() > 0) {
                     String fileName = java.nio.file.Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
                     String nameWithoutExt = fileName;
@@ -995,40 +999,74 @@ public class AdminServlet extends HttpServlet {
                     filePart.write(filePath);
                     String customHeroImage = "image/" + newFileName;
 
-                    // Save to config file
-                    String configPath = request.getServletContext().getRealPath("/WEB-INF/hero_config.txt");
+                    // Load properties, update, and save
+                    String configPath = request.getServletContext().getRealPath("/WEB-INF/hero_config.properties");
+                    java.util.Properties props = new java.util.Properties();
                     File configFile = new File(configPath);
-                    try (java.io.FileWriter fw = new java.io.FileWriter(configFile)) {
-                        fw.write(customHeroImage);
+                    if (configFile.exists()) {
+                        try (java.io.FileInputStream fis = new java.io.FileInputStream(configFile)) {
+                            props.load(fis);
+                        }
                     }
-                    response.sendRedirect(redirectDest + "&success=Hero image updated successfully.");
+                    props.setProperty(heroPage, customHeroImage);
+                    try (java.io.FileOutputStream fos = new java.io.FileOutputStream(configFile)) {
+                        props.store(fos, "Hero Banner Configurations");
+                    }
+
+                    // Keep hero_config.txt synchronized if this is the home page, for backward compatibility
+                    if ("home".equals(heroPage)) {
+                        String txtPath = request.getServletContext().getRealPath("/WEB-INF/hero_config.txt");
+                        try (java.io.FileWriter fw = new java.io.FileWriter(new File(txtPath))) {
+                            fw.write(customHeroImage);
+                        }
+                    }
+
+                    response.sendRedirect(redirectDest + "&success=Hero image for " + heroPage + " updated successfully.");
                 } else {
                     response.sendRedirect(redirectDest + "&error=Please select a valid image file to upload.");
                 }
 
             } else if ("deleteHeroBanner".equalsIgnoreCase(action)) {
-                String redirectDest = "admin?tab=hero";
-                String configPath = request.getServletContext().getRealPath("/WEB-INF/hero_config.txt");
+                String heroPage = request.getParameter("heroPage");
+                if (heroPage == null || heroPage.trim().isEmpty()) {
+                    heroPage = "home";
+                }
+                String redirectDest = "admin?tab=hero&pageSelect=" + heroPage;
+                String configPath = request.getServletContext().getRealPath("/WEB-INF/hero_config.properties");
                 File configFile = new File(configPath);
+                java.util.Properties props = new java.util.Properties();
                 if (configFile.exists()) {
-                    try {
-                        String currentImage = "";
-                        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(configFile))) {
-                            currentImage = br.readLine();
-                        }
-                        if (currentImage != null && !currentImage.trim().isEmpty()) {
+                    try (java.io.FileInputStream fis = new java.io.FileInputStream(configFile)) {
+                        props.load(fis);
+                    }
+                    String currentImage = props.getProperty(heroPage);
+                    if (currentImage != null) {
+                        try {
                             String physicalPath = request.getServletContext().getRealPath("") + File.separator + currentImage.replace('/', File.separatorChar);
                             File imgFile = new File(physicalPath);
                             if (imgFile.exists()) {
                                 imgFile.delete();
                             }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                        props.remove(heroPage);
+                        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(configFile)) {
+                            props.store(fos, "Hero Banner Configurations");
+                        }
                     }
-                    configFile.delete();
                 }
-                response.sendRedirect(redirectDest + "&success=Hero image deleted. Reverted to default banner.");
+
+                // If home page, also delete txt config file for backward compatibility
+                if ("home".equals(heroPage)) {
+                    String txtPath = request.getServletContext().getRealPath("/WEB-INF/hero_config.txt");
+                    File txtFile = new File(txtPath);
+                    if (txtFile.exists()) {
+                        txtFile.delete();
+                    }
+                }
+
+                response.sendRedirect(redirectDest + "&success=Hero image for " + heroPage + " deleted. Reverted to default.");
 
             } else if ("deleteReviewAdmin".equalsIgnoreCase(action)) {
                 int reviewId = Integer.parseInt(request.getParameter("reviewId"));

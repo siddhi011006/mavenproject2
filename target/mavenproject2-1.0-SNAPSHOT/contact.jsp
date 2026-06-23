@@ -14,7 +14,7 @@
     <%@ include file="navbar.jsp" %>
 
     <!-- Hero banner -->
-    <section class="hero" style="height: 35vh; min-height: 250px;">
+    <section class="hero" style="height: 35vh; min-height: 250px; background: linear-gradient(rgba(250, 248, 245, 0.82), rgba(250, 248, 245, 0.88)), url('<%= heroConfigProps.getProperty("contact", "image/bc2.jpg") %>') no-repeat center center/cover;">
         <div class="hero-content">
             <h1 style="font-size: 2.8rem;">Get In Touch</h1>
             <p>Have questions about shade matching, orders, or shipping? Our experts are here to assist you.</p>
