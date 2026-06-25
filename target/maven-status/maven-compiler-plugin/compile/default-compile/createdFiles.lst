@@ -1,4 +1,5 @@
 com\mycompany\mavenproject2\CartServlet.class
+com\mycompany\mavenproject2\CMSHelper.class
 com\mycompany\mavenproject2\ReviewServlet.class
 com\mycompany\mavenproject2\alogin.class
 com\mycompany\mavenproject2\JakartaRestConfiguration.class

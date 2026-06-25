@@ -596,7 +596,7 @@
                                     
                                     <td style="vertical-align:middle; text-align:right; padding-right:15px;">
                                         <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
-                                            <a href="admin?tab=reviews&productId=<%= id %>" class="btn-outline" style="border-radius:6px; padding:6px 10px; font-size:0.75rem; text-transform:none; display:inline-flex; align-items:center; gap:4px; color:var(--gold); border-color:var(--gold);">
+                                            <a href="admin?tab=reviews&productId=<%= id %>" class="btn-outline" style="border-radius:6px; padding:6px 10px; font-size:0.75rem; text-transform:none; display:inline-flex; align-items:center; gap:4px; border-color: var(--gold); color: var(--gold);">
                                                 <i class="fas fa-star"></i> Reviews
                                             </a>
                                             <a href="admin?tab=product-details&id=<%= id %>" class="btn-outline" style="border-radius:6px; padding:6px 10px; font-size:0.75rem; text-transform:none; display:inline-flex; align-items:center; gap:4px;">
@@ -1208,16 +1208,10 @@
                             }
                         }
                     %>
-                    <div style="text-align:left; margin-bottom:25px; display:flex; gap:10px; align-items:center;">
+                    <div style="text-align:left; margin-bottom:25px;">
                         <a href="admin?tab=products" class="btn-outline" style="padding:8px 16px; border-radius:8px; text-decoration:none; font-size:0.85rem; display:inline-block;">
                             <i class="fas fa-arrow-left" style="margin-right:8px;"></i> Back to Catalog
                         </a>
-                        <% if (prodId > 0) { %>
-                            <a href="admin?tab=reviews&productId=<%= prodId %>" class="btn-outline" style="padding:8px 16px; border-radius:8px; text-decoration:none; font-size:0.85rem; display:inline-block; color:var(--gold); border-color:var(--gold);">
-                                <i class="fas fa-star" style="margin-right:8px;"></i> View Reviews
-                            </a>
-                        <% } %>
-                    </div>
                         <h2 style="font-size:1.8rem; border-bottom:none; margin:15px 0 0 0; padding-bottom:0; font-family:'Playfair Display', serif;">
                             Manage Product: <span style="color:var(--gold);" id="detailsProductNameHeader"><%= pName %></span>
                         </h2>
@@ -1421,7 +1415,12 @@
 
                             <!-- Product Reviews Card -->
                             <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux);">
-                                <h3 style="font-size:1.2rem; border:none; margin-top:0; margin-bottom:15px; color:var(--burgundy); font-family:'Playfair Display', serif;">Product Reviews Moderation</h3>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                                    <h3 style="font-size:1.2rem; border:none; margin:0; color:var(--burgundy); font-family:'Playfair Display', serif;">Product Reviews Moderation</h3>
+                                    <a href="admin?tab=reviews&productId=<%= prodId %>" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; text-transform:none; text-decoration:none; display:inline-flex; align-items:center; gap:4px; border-color:var(--gold); color:var(--gold);">
+                                        <i class="fas fa-history"></i> View Complete History
+                                    </a>
+                                </div>
                                 <div style="display:flex; flex-direction:column; gap:12px; max-height:350px; overflow-y:auto; padding-right:5px;">
                                     <%
                                         try (Connection con = DBConnection.getConnection();
@@ -1675,7 +1674,7 @@
                                     rs.close();
                                     st.close();
                                     con.close();
-                                } catch (Exception e) {
+} catch (Exception e) {
                                     out.println("<tr><td colspan='10' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
                                 }
                             %>
@@ -1684,202 +1683,264 @@
                     </div>
 
                   <% } else if ("reviews".equalsIgnoreCase(activeTab)) { 
-                     // Load reviews configuration properties
-                     java.util.Properties reviewsProps = new java.util.Properties();
-                     try {
-                         String rcPath = application.getRealPath("/WEB-INF/reviews_config.properties");
-                         if (rcPath != null) {
-                             java.io.File rcf = new java.io.File(rcPath);
-                             if (rcf.exists()) {
-                                 try (java.io.FileInputStream fis = new java.io.FileInputStream(rcf)) {
-                                     reviewsProps.load(fis);
+                     // Rebuilt Reviews Admin tab from scratch focusing on moderation and filters
+                     int totalReviewsCount = 0;
+                     int visibleReviewsCount = 0;
+                     int hiddenReviewsCount = 0;
+                     double avgReviewRating = 0.0;
+                     List<Map<String, Object>> filterProducts = new java.util.ArrayList<>();
+                     
+                     try (Connection con = DBConnection.getConnection()) {
+                         // Fetch KPI statistics
+                         try (Statement st = con.createStatement()) {
+                             try (ResultSet rs = st.executeQuery("SELECT COUNT(*), COALESCE(SUM(CASE WHEN is_hidden = 0 THEN 1 ELSE 0 END), 0), COALESCE(SUM(CASE WHEN is_hidden = 1 THEN 1 ELSE 0 END), 0), COALESCE(AVG(rating), 0.0) FROM reviews")) {
+                                 if (rs.next()) {
+                                     totalReviewsCount = rs.getInt(1);
+                                     visibleReviewsCount = rs.getInt(2);
+                                     hiddenReviewsCount = rs.getInt(3);
+                                     avgReviewRating = rs.getDouble(4);
+                                 }
+                             }
+                             
+                             // Fetch product names for filters
+                             try (ResultSet rs = st.executeQuery("SELECT id, name FROM products ORDER BY name ASC")) {
+                                 while (rs.next()) {
+                                     Map<String, Object> p = new java.util.HashMap<>();
+                                     p.put("id", rs.getInt("id"));
+                                     p.put("name", rs.getString("name"));
+                                     filterProducts.add(p);
                                  }
                              }
                          }
-                     } catch (Exception e) {
-                         e.printStackTrace();
+                     } catch (Exception ex) {
+                         ex.printStackTrace();
                      }
-                     String reviewFooterText = reviewsProps.getProperty("reviews.footer.text", "Disclaimer: Customer reviews are individual experiences and may not reflect dermatological outcomes for all skin types.");
-                     String reviewsEnabled = reviewsProps.getProperty("reviews.enabled", "true");
-                     String reviewsRequireModeration = reviewsProps.getProperty("reviews.require.moderation", "false");
-                     String reviewsRequireLogin = reviewsProps.getProperty("reviews.require.login", "true");
-                 %>
-                    <!-- ==========================================
-                         REVIEWS TAB
-                         ========================================== -->
-                    <div style="text-align:left; margin-bottom:25px;">
-                        <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Reviews Management & Moderation</h2>
-                        <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Audit client product experiences, filter feedback, or moderate visibility.</p>
-                    </div>
 
-                    <!-- Config Cards Stacked (Premium Layout - Footer Above Settings) -->
-                    <div style="display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px;">
-                        
-                        <!-- 1. Review Section Footer Card -->
-                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux); display:flex; flex-direction:column; justify-content:space-between;">
-                            <div>
-                                <h3 style="font-size:1.3rem; margin-bottom:10px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;">Review Section Footer</h3>
-                                <p style="color:var(--text-muted); font-size:0.8rem; margin-top:0; margin-bottom:20px;">Disclaimer or custom footer text displayed below the customer reviews section on product pages.</p>
-                                
-                                <form action="AdminServlet" method="POST" style="margin:0;">
-                                    <input type="hidden" name="action" value="updateReviewsFooter">
-                                    <div class="form-group" style="text-align:left; margin-bottom:20px;">
-                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:8px;">Footer Disclaimer Text</label>
-                                        <textarea name="footerText" rows="4" required style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none; resize:vertical;"><%= reviewFooterText %></textarea>
-                                    </div>
-                                    <button type="submit" class="btn-gold" style="width:100%; border-radius:30px; padding:12px; font-size:0.85rem; font-weight:600; margin:0;">
-                                        Save Footer Configuration
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                     String filterProductIdParam = request.getParameter("productId");
+                     int filterProductId = 0;
+                     if (filterProductIdParam != null && !filterProductIdParam.trim().isEmpty()) {
+                         try {
+                             filterProductId = Integer.parseInt(filterProductIdParam.trim());
+                         } catch (NumberFormatException e) {}
+                     }
+                  %>
+                     <!-- ==========================================
+                          REVIEWS TAB (REBUILT)
+                          ========================================== -->
+                     <div style="text-align:left; margin-bottom:25px;">
+                         <h2 style="font-size:1.6rem; border-bottom:none; margin:0; padding-bottom:0; font-family:'Playfair Display', serif; color:var(--burgundy);">Reviews Moderation Dashboard</h2>
+                         <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Monitor customer feedback, filter by rating/product/status, and manage visibility or delete entries.</p>
+                     </div>
 
-                        <!-- 2. Review Settings Card -->
-                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; box-shadow:var(--shadow-lux); display:flex; flex-direction:column; justify-content:space-between;">
-                            <div>
-                                <h3 style="font-size:1.3rem; margin-bottom:10px; border:none; color:var(--burgundy); font-family:'Playfair Display', serif;">Review Settings</h3>
-                                <p style="color:var(--text-muted); font-size:0.8rem; margin-top:0; margin-bottom:20px;">Configure validation requirements, default visibility, and toggles for user-submitted feedback.</p>
-                                
-                                <form action="AdminServlet" method="POST" style="margin:0;">
-                                    <input type="hidden" name="action" value="updateReviewsSettings">
-                                    
-                                    <div class="form-group" style="text-align:left; margin-bottom:15px;">
-                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:6px;">Storefront Reviews Display</label>
-                                        <select name="enabled" required style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none;">
-                                            <option value="true" <%= "true".equals(reviewsEnabled) ? "selected" : "" %>>Enabled (Render reviews tab on product pages)</option>
-                                            <option value="false" <%= "false".equals(reviewsEnabled) ? "selected" : "" %>>Disabled (Hide reviews section on product pages)</option>
-                                        </select>
-                                    </div>
+                     <!-- KPI Cards -->
+                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-lux); display: flex; align-items: center; gap: 15px;">
+                             <div style="background: rgba(197, 171, 87, 0.1); color: var(--gold); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                 <i class="fas fa-comments"></i>
+                             </div>
+                             <div>
+                                 <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Total Reviews</div>
+                                 <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;"><%= totalReviewsCount %></div>
+                             </div>
+                         </div>
+                         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-lux); display: flex; align-items: center; gap: 15px;">
+                             <div style="background: rgba(46, 204, 113, 0.1); color: var(--success); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                 <i class="fas fa-check-circle"></i>
+                             </div>
+                             <div>
+                                 <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Approved</div>
+                                 <div style="font-size: 1.6rem; font-weight: 700; color: var(--success); margin-top: 2px;"><%= visibleReviewsCount %></div>
+                             </div>
+                         </div>
+                         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-lux); display: flex; align-items: center; gap: 15px;">
+                             <div style="background: rgba(231, 76, 60, 0.1); color: var(--danger); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                 <i class="fas fa-eye-slash"></i>
+                             </div>
+                             <div>
+                                 <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Hidden</div>
+                                 <div style="font-size: 1.6rem; font-weight: 700; color: var(--danger); margin-top: 2px;"><%= hiddenReviewsCount %></div>
+                             </div>
+                         </div>
+                         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-lux); display: flex; align-items: center; gap: 15px;">
+                             <div style="background: rgba(241, 196, 15, 0.1); color: var(--gold); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                 <i class="fas fa-star"></i>
+                             </div>
+                             <div>
+                                 <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Avg Rating</div>
+                                 <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;"><%= String.format(java.util.Locale.US, "%.2f", avgReviewRating) %> / 5</div>
+                             </div>
+                         </div>
+                     </div>
 
-                                    <div class="form-group" style="text-align:left; margin-bottom:15px;">
-                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:6px;">Review Moderation Queue</label>
-                                        <select name="requireModeration" required style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none;">
-                                            <option value="true" <%= "true".equals(reviewsRequireModeration) ? "selected" : "" %>>Moderated (New reviews start hidden until approved)</option>
-                                            <option value="false" <%= "false".equals(reviewsRequireModeration) ? "selected" : "" %>>Auto-Publish (New reviews are visible instantly)</option>
-                                        </select>
-                                    </div>
+                     <!-- Filters -->
+                     <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: var(--shadow-lux);">
+                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                             <div style="display: flex; flex-direction: column; gap: 6px;">
+                                 <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Search</label>
+                                 <div class="search-input-wrapper" style="margin-bottom: 0; width: 100%; max-width: 100%;">
+                                     <i class="fas fa-search"></i>
+                                     <input type="text" id="reviewSearch" onkeyup="filterReviews()" placeholder="Search customer, product, comment..." style="width: 100%;">
+                                 </div>
+                             </div>
+                             <div style="display: flex; flex-direction: column; gap: 6px;">
+                                 <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Filter by Product</label>
+                                 <select id="filterProduct" onchange="filterReviews()" style="padding: 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-primary); font-size: 0.85rem; outline: none; width: 100%;">
+                                     <option value="ALL">All Products</option>
+                                     <% for (Map<String, Object> p : filterProducts) { %>
+                                         <option value="<%= p.get("id") %>" <%= ((Integer) p.get("id")) == filterProductId ? "selected" : "" %>><%= p.get("name") %></option>
+                                     <% } %>
+                                 </select>
+                             </div>
+                             <div style="display: flex; flex-direction: column; gap: 6px;">
+                                 <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Filter by Rating</label>
+                                 <select id="filterRating" onchange="filterReviews()" style="padding: 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-primary); font-size: 0.85rem; outline: none; width: 100%;">
+                                     <option value="ALL">All Ratings</option>
+                                     <option value="5">5 Stars</option>
+                                     <option value="4">4 Stars</option>
+                                     <option value="3">3 Stars</option>
+                                     <option value="2">2 Stars</option>
+                                     <option value="1">1 Star</option>
+                                 </select>
+                             </div>
+                             <div style="display: flex; flex-direction: column; gap: 6px;">
+                                 <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Filter by Date</label>
+                                 <select id="filterDate" onchange="filterReviews()" style="padding: 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-primary); font-size: 0.85rem; outline: none; width: 100%;">
+                                     <option value="ALL">All Dates</option>
+                                     <option value="TODAY">Today</option>
+                                     <option value="LAST_7">Last 7 Days</option>
+                                     <option value="LAST_30">Last 30 Days</option>
+                                 </select>
+                             </div>
+                             <div style="display: flex; flex-direction: column; gap: 6px;">
+                                 <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Filter by Status</label>
+                                 <select id="filterStatus" onchange="filterReviews()" style="padding: 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-primary); font-size: 0.85rem; outline: none; width: 100%;">
+                                     <option value="ALL">All Statuses</option>
+                                     <option value="APPROVED">Approved (Visible)</option>
+                                     <option value="HIDDEN">Hidden</option>
+                                 </select>
+                             </div>
+                         </div>
+                     </div>
 
-                                    <div class="form-group" style="text-align:left; margin-bottom:20px;">
-                                        <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:6px;">Authentication Requirement</label>
-                                        <select name="requireLogin" required style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-primary); font-size:0.85rem; outline:none;">
-                                            <option value="true" <%= "true".equals(reviewsRequireLogin) ? "selected" : "" %>>Registered Clients Only (Must sign in to review)</option>
-                                            <option value="false" <%= "false".equals(reviewsRequireLogin) ? "selected" : "" %>>Public Submissions (Anyone can write a review)</option>
-                                        </select>
-                                    </div>
-
-                                    <button type="submit" class="btn-gold" style="width:100%; border-radius:30px; padding:12px; font-size:0.85rem; font-weight:600; margin:0;">
-                                        Save Settings Configuration
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-
-                    </div>
-
-
-                    <!-- Search Bar for Reviews -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:25px; flex-wrap:wrap;">
-                        <div class="search-input-wrapper" style="max-width:350px; text-align:left; margin-bottom:0; width:100%;">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="reviewSearch" onkeyup="searchReviews()" placeholder="Search reviews by customer name, product, or comment...">
-                        </div>
-                        <div>
-                            <select id="reviewFilter" onchange="filterReviews()" style="padding:10px 20px; border-radius:12px; background:var(--bg-card); font-size:0.85rem; min-width:180px; border:1px solid var(--border-color); color:var(--text-primary);">
-                                <option value="ALL">All Visibility</option>
-                                <option value="VISIBLE">Visible Reviews Only</option>
-                                <option value="HIDDEN">Hidden Reviews Only</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="admin-table-wrapper">
-                    <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;" id="reviewsTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Product</th>
-                                <th>Customer</th>
-                                <th>Stars</th>
-                                <th style="width:35%;">Comment</th>
-                                <th>Submitted</th>
-                                <th>Visibility</th>
-                                <th style="text-align:right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <%
-                                try {
-                                    Connection con = DBConnection.getConnection();
-                                    Statement st = con.createStatement();
-                                    ResultSet rs = st.executeQuery(
-                                        "SELECT r.id, r.product_id, u.fullname, r.rating, r.review_text AS comment, r.created_at, r.is_hidden, p.name AS product_name " +
-                                        "FROM reviews r JOIN products p ON r.product_id = p.id JOIN users u ON r.user_id = u.id ORDER BY r.created_at DESC"
-                                    );
-                                    boolean hasReviews = false;
-                                    while (rs.next()) {
-                                        hasReviews = true;
-                                        int id = rs.getInt("id");
-                                        int pId = rs.getInt("product_id");
-                                        String pName2 = rs.getString("product_name");
-                                        String rName = rs.getString("fullname");
-                                        int rRating = rs.getInt("rating");
-                                        String rComment = rs.getString("comment");
-                                        Timestamp rDate = rs.getTimestamp("created_at");
-                                        int isHidden = rs.getInt("is_hidden");
-                            %>
-                            <tr class="review-row" data-hidden="<%= isHidden %>">
-                                <td style="font-weight:600; color:var(--gold);">#<%= id %></td>
-                                <td style="font-weight:600;"><a href="admin?tab=product-details&id=<%= pId %>" style="color:inherit;"><%= pName2 %></a></td>
-                                <td class="rev-customer" style="font-weight:600;"><%= rName %></td>
-                                <td style="color:var(--gold); font-size:0.8rem; white-space:nowrap;">
-                                    <% for (int i = 0; i < rRating; i++) { %><i class="fas fa-star"></i><% } %>
-                                </td>
-                                <td class="rev-comment" style="font-size:0.8rem; line-height:1.4;"><%= rComment %></td>
-                                <td style="font-size:0.75rem;"><%= rDate %></td>
-                                <td>
-                                    <span class="status-badge <%= isHidden == 1 ? "status-cancelled" : "status-completed" %>">
-                                        <%= isHidden == 1 ? "Hidden" : "Visible" %>
-                                    </span>
-                                </td>
-                                <td style="text-align:right;">
-                                    <div style="display:flex; justify-content:flex-end; gap:6px;">
-                                        <form action="AdminServlet" method="POST" style="margin:0;">
-                                            <input type="hidden" name="action" value="toggleReviewVisibility">
-                                            <input type="hidden" name="reviewId" value="<%= id %>">
-                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; text-transform:none;">
-                                                <%= isHidden == 1 ? "Unhide" : "Hide" %>
-                                            </button>
-                                        </form>
-                                        <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete review by <%= rName %>?');">
-                                            <input type="hidden" name="action" value="deleteReviewAdmin">
-                                            <input type="hidden" name="reviewId" value="<%= id %>">
-                                            <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 12px; font-size:0.75rem; color:var(--danger); border-color:var(--danger); background:transparent; text-transform:none;">
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            <%
-                                    }
-                                    if (!hasReviews) {
-                            %>
-                            <tr>
-                                <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No reviews written yet.</td>
-                            </tr>
-                            <%
-                                    }
-                                    rs.close();
-                                    st.close();
-                                    con.close();
-                                } catch (Exception e) {
-                                    out.println("<tr><td colspan='8' style='color:var(--danger);'>Error: " + e.getMessage() + "</td></tr>");
-                                }
-                            %>
-                        </tbody>
-                    </table>
-                    </div>
-                                      <% } else if ("hero".equalsIgnoreCase(activeTab)) { 
+                     <!-- Reviews Table -->
+                     <div class="admin-table-wrapper">
+                     <table class="admin-table" style="width:100%; margin-top:0; border-collapse:collapse;" id="reviewsTable">
+                         <thead>
+                             <tr>
+                                 <th style="width:60px;">ID</th>
+                                 <th style="width:220px;">Product</th>
+                                 <th style="width:140px;">Reviewer</th>
+                                 <th style="width:100px;">Rating</th>
+                                 <th style="width:30%;">Review Text</th>
+                                 <th style="width:130px;">Date</th>
+                                 <th style="width:100px; text-align:center;">Status</th>
+                                 <th style="text-align:right; width:220px; padding-right:15px;">Actions</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             <%
+                                 try (Connection con = DBConnection.getConnection();
+                                      Statement st = con.createStatement();
+                                      ResultSet rs = st.executeQuery(
+                                          "SELECT r.id, r.product_id, u.fullname, r.rating, r.review_text AS comment, r.created_at, r.is_hidden, p.name AS product_name, p.image_url AS product_image " +
+                                          "FROM reviews r JOIN products p ON r.product_id = p.id JOIN users u ON r.user_id = u.id ORDER BY r.created_at DESC"
+                                      )) {
+                                     boolean hasReviews = false;
+                                     while (rs.next()) {
+                                         hasReviews = true;
+                                         int id = rs.getInt("id");
+                                         int pId = rs.getInt("product_id");
+                                         String pName = rs.getString("product_name");
+                                         String pImg = rs.getString("product_image");
+                                         String rName = rs.getString("fullname");
+                                         int rRating = rs.getInt("rating");
+                                         String rComment = rs.getString("comment");
+                                         Timestamp rDate = rs.getTimestamp("created_at");
+                                         int isHidden = rs.getInt("is_hidden");
+                                         
+                                         String formattedDate = rDate != null ? rDate.toString().substring(0, 16) : "N/A";
+                                         String jsEscapedComment = rComment.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+                                         String jsEscapedProductName = pName.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"");
+                                         String jsEscapedReviewerName = rName.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"");
+                             %>
+                             <tr class="review-row" 
+                                 data-id="<%= id %>"
+                                 data-product-id="<%= pId %>"
+                                 data-product-name="<%= pName.toLowerCase() %>"
+                                 data-reviewer-name="<%= rName.toLowerCase() %>"
+                                 data-comment="<%= rComment.toLowerCase() %>"
+                                 data-rating="<%= rRating %>"
+                                 data-date-time="<%= rDate != null ? rDate.getTime() : 0 %>"
+                                 data-hidden="<%= isHidden %>"
+                                 style="border-bottom:1px solid var(--border-light); vertical-align:middle;">
+                                 
+                                 <td style="font-weight:600; color:var(--gold);">#<%= id %></td>
+                                 <td>
+                                     <div style="display:flex; align-items:center; gap:10px;">
+                                         <div style="width:40px; height:40px; border-radius:6px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-dark); flex-shrink:0;">
+                                             <img src="<%= pImg != null ? pImg : "image/silkfoundation.jpg" %>" alt="<%= pName %>" style="width:100%; height:100%; object-fit:cover;">
+                                         </div>
+                                         <div style="font-weight:600; font-size:0.85rem; line-height:1.2;">
+                                             <a href="admin?tab=product-details&id=<%= pId %>" style="color:var(--text-primary); text-decoration:none;"><%= pName %></a>
+                                         </div>
+                                     </div>
+                                 </td>
+                                 <td style="font-weight:600;"><%= rName %></td>
+                                 <td style="color:var(--gold); font-size:0.8rem; white-space:nowrap;">
+                                     <% for (int i = 0; i < 5; i++) { %>
+                                         <i class="<%= i < rRating ? "fas" : "far" %> fa-star"></i>
+                                     <% } %>
+                                 </td>
+                                 <td style="font-size:0.8rem; line-height:1.4; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                     <span title="<%= rComment %>"><%= rComment %></span>
+                                 </td>
+                                 <td style="font-size:0.75rem; color:var(--text-muted);"><%= formattedDate %></td>
+                                 <td style="text-align:center;">
+                                     <span class="status-badge <%= isHidden == 1 ? "status-cancelled" : "status-completed" %>" style="font-size:0.7rem; padding: 4px 10px; border-radius: 20px;">
+                                         <%= isHidden == 1 ? "Hidden" : "Approved" %>
+                                     </span>
+                                 </td>
+                                 <td style="text-align:right; padding-right:15px;">
+                                     <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
+                                         <button type="button" class="btn-outline" 
+                                                 onclick="openReviewDetailsModal(<%= id %>, '<%= jsEscapedProductName %>', '<%= pImg != null ? pImg : "image/silkfoundation.jpg" %>', '<%= jsEscapedReviewerName %>', <%= rRating %>, '<%= jsEscapedComment %>', '<%= formattedDate %>', <%= isHidden %>)" 
+                                                 style="border-radius:6px; padding:6px 10px; font-size:0.72rem; text-transform:none;">
+                                             <i class="fas fa-info-circle"></i> Details
+                                         </button>
+                                         <form action="AdminServlet" method="POST" style="margin:0;">
+                                             <input type="hidden" name="action" value="toggleReviewVisibility">
+                                             <input type="hidden" name="reviewId" value="<%= id %>">
+                                             <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 10px; font-size:0.72rem; text-transform:none; border-color: var(--gold); color: var(--gold);">
+                                                 <%= isHidden == 1 ? "Approve" : "Hide" %>
+                                             </button>
+                                         </form>
+                                         <form action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete review by <%= jsEscapedReviewerName %>?');">
+                                             <input type="hidden" name="action" value="deleteReviewAdmin">
+                                             <input type="hidden" name="reviewId" value="<%= id %>">
+                                             <button type="submit" class="btn-outline" style="border-radius:6px; padding:6px 10px; font-size:0.72rem; color:var(--danger); border-color:var(--danger); background:transparent; text-transform:none;">
+                                                 Delete
+                                             </button>
+                                         </form>
+                                     </div>
+                                 </td>
+                             </tr>
+                             <%
+                                     }
+                                     if (!hasReviews) {
+                             %>
+                             <tr>
+                                 <td colspan="8" style="text-align:center; padding:40px; color:var(--text-muted); font-size:0.9rem;">No reviews written yet.</td>
+                             </tr>
+                             <%
+                                     }
+                                 } catch (Exception e) {
+                                     out.println("<tr><td colspan='8' style='color:var(--danger); padding:20px;'>Error loading reviews: " + e.getMessage() + "</td></tr>");
+                                 }
+                             %>
+                         </tbody>
+                     </table>
+                     </div>
+                  <% } else if ("hero".equalsIgnoreCase(activeTab)) { 
                         java.util.Properties adminHeroProps = new java.util.Properties();
                         try {
                             String hcPath = application.getRealPath("/WEB-INF/hero_config.properties");
@@ -3048,24 +3109,6 @@
         </div>
     </div>
 
-    <!-- ==========================================
-         MODAL 3B: VIEW REVIEW DETAILS
-         ========================================== -->
-    <div id="reviewDetailsModal" class="modal">
-        <div class="modal-content" style="max-width:550px;">
-            <span class="modal-close" onclick="closeReviewDetailsModal()">&times;</span>
-            <h3 style="font-family:'Playfair Display', serif; font-size:1.5rem; color:var(--gold); border-bottom:1px solid var(--border-light); padding-bottom:8px; margin-bottom:20px; text-align:left;">
-                Customer Feedback Review Details
-            </h3>
-            <div id="reviewDetailsModalBody" style="text-align:left; font-size: 0.9rem; line-height: 1.6;">
-                <!-- Dynamically loaded content -->
-            </div>
-            <button class="btn-gold" style="width:100%; border-radius:12px; padding:12px; margin-top:20px; text-transform:none;" onclick="closeReviewDetailsModal()">
-                Close Details
-            </button>
-        </div>
-    </div>
-
     <!-- ==================================================
          MODAL 4: ADD VARIANT (NEW)
          ================================================== -->
@@ -3938,104 +3981,94 @@
         </div>
     </div>
 
+    <!-- Review Details Modal -->
+    <div id="reviewDetailsModal" class="modal" style="display:none; align-items:center; justify-content:center; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6);">
+        <div class="modal-content" style="max-width:550px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px; padding:30px; position:relative; box-shadow:var(--shadow-lux); color:var(--text-primary);">
+            <span class="modal-close" onclick="closeReviewDetailsModal()" style="position:absolute; right:20px; top:15px; font-size:1.8rem; font-weight:bold; color:var(--text-muted); cursor:pointer;">&times;</span>
+            
+            <h3 style="font-family:'Playfair Display', serif; color:var(--burgundy); font-size:1.4rem; margin-top:0; margin-bottom:20px; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
+                <i class="fas fa-comment-dots" style="margin-right:8px; color:var(--gold);"></i> Review Details
+            </h3>
+            
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                <!-- Product Information Card -->
+                <div style="display:flex; align-items:center; gap:15px; background:var(--bg-dark); padding:15px; border-radius:16px; border:1px solid var(--border-light);">
+                    <div style="width:60px; height:60px; border-radius:8px; overflow:hidden; border:1px solid var(--border-color); flex-shrink:0;">
+                        <img id="detailReviewProductImg" src="" alt="Product" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="font-size:0.7rem; font-weight:700; color:var(--gold); letter-spacing:1px; text-transform:uppercase;">Product</div>
+                        <div id="detailReviewProductName" style="font-weight:600; font-size:1.05rem; color:var(--text-primary);">Product Name</div>
+                    </div>
+                </div>
+                
+                <!-- Reviewer & Rating Metadata -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; text-align:left;">
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Reviewer</div>
+                        <div id="detailReviewerName" style="font-weight:600; font-size:0.95rem; margin-top:3px;">Customer Name</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Rating</div>
+                        <div id="detailReviewRatingStars" style="color:var(--gold); font-size:0.9rem; margin-top:3px;">
+                            <!-- Stars dynamic -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; text-align:left;">
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Date Submitted</div>
+                        <div id="detailReviewDate" style="font-size:0.85rem; font-weight:500; margin-top:3px;">N/A</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Status</div>
+                        <div style="margin-top:3px;">
+                            <span id="detailReviewStatusBadge" class="status-badge" style="font-size:0.7rem; padding: 4px 10px; border-radius: 20px;">Approved</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Full Review Content -->
+                <div style="display:flex; flex-direction:column; gap:6px; text-align:left;">
+                    <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Review Text</div>
+                    <div id="detailReviewText" style="font-size:0.85rem; line-height:1.6; background:var(--bg-dark); padding:15px; border-radius:12px; border:1px solid var(--border-light); max-height:150px; overflow-y:auto; word-break:break-word; text-align:left;">
+                        Full review text goes here.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Actions Footer -->
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:25px; border-top:1px solid var(--border-light); padding-top:15px;">
+                <!-- Hide/Approve Form inside modal -->
+                <form id="modalApproveForm" action="AdminServlet" method="POST" style="margin:0;">
+                    <input type="hidden" name="action" value="toggleReviewVisibility">
+                    <input type="hidden" name="reviewId" id="modalReviewIdHiddenToggle" value="">
+                    <button type="submit" id="modalApproveBtn" class="btn-gold" style="border-radius:8px; padding:10px 20px; font-size:0.8rem; margin:0; min-width:100px;">
+                        Approve
+                    </button>
+                </form>
+                
+                <!-- Delete Form inside modal -->
+                <form id="modalDeleteForm" action="AdminServlet" method="POST" style="margin:0;" onsubmit="return confirm('Permanently delete this review?');">
+                    <input type="hidden" name="action" value="deleteReviewAdmin">
+                    <input type="hidden" name="reviewId" id="modalReviewIdHiddenDelete" value="">
+                    <button type="submit" class="btn-outline" style="border-radius:8px; padding:10px 20px; font-size:0.8rem; color:var(--danger); border-color:var(--danger); background:transparent; margin:0; min-width:100px;">
+                        Delete
+                    </button>
+                </form>
+                
+                <button type="button" class="btn-outline" onclick="closeReviewDetailsModal()" style="border-radius:8px; padding:10px 20px; font-size:0.8rem; margin:0; min-width:100px;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <%@ include file="../footer.jsp" %>
 
     <script>
-        function openReviewDetailsModal(prodName, prodImg, revName, rating, comment, date, status) {
-            const body = document.getElementById('reviewDetailsModalBody');
-            let starsHtml = '';
-            for (let i = 0; i < 5; i++) {
-                starsHtml += i < rating ? '<i class="fas fa-star" style="color:var(--gold); margin-right:3px;"></i>' : '<i class="far fa-star" style="color:var(--text-muted); margin-right:3px;"></i>';
-            }
-            
-            let statusClass = status === 'APPROVED' ? 'status-completed' : 'status-cancelled';
-            let statusText = status === 'APPROVED' ? 'Approved / Visible' : 'Hidden';
-            
-            body.innerHTML = `
-                <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px; border-bottom:1px solid var(--border-light); padding-bottom:15px;">
-                    <img src="${prodImg}" style="width:60px; height:60px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); background:var(--bg-dark);">
-                    <div>
-                        <span style="font-size:0.75rem; font-weight:700; color:var(--gold); text-transform:uppercase;">Product</span>
-                        <div style="font-weight:600; font-family:\'Playfair Display\', serif; font-size:1.1rem; color:var(--burgundy);">${prodName}</div>
-                    </div>
-                </div>
-                
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                    <div>
-                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Reviewer</span>
-                        <strong style="font-size:0.95rem;">${revName}</strong>
-                    </div>
-                    <div>
-                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Date Submitted</span>
-                        <span style="font-size:0.95rem;">${date}</span>
-                    </div>
-                </div>
-                
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px; border-bottom:1px solid var(--border-light); padding-bottom:15px;">
-                    <div>
-                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Rating Score</span>
-                        <div style="margin-top:4px;">${starsHtml}</div>
-                    </div>
-                    <div>
-                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block;">Moderation Status</span>
-                        <span class="status-badge ${statusClass}" style="display:inline-block; margin-top:4px; font-size:0.75rem; padding:4px 10px; border-radius:20px;">${statusText}</span>
-                    </div>
-                </div>
-                
-                <div>
-                    <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:6px;">Review Content</span>
-                    <div style="background:var(--bg-dark); border:1px solid var(--border-color); padding:15px; border-radius:12px; color:var(--text-primary); font-size:0.9rem; font-style:italic; white-space:pre-wrap;">"${comment}"</div>
-                </div>
-            `;
-            
-            document.getElementById('reviewDetailsModal').style.display = 'flex';
-        }
-        function closeReviewDetailsModal() {
-            document.getElementById('reviewDetailsModal').style.display = 'none';
-        }
-        function filterReviewsTable() {
-            const searchQuery = document.getElementById('reviewSearchInput').value.toLowerCase().trim();
-            const ratingFilter = document.getElementById('reviewRatingFilter').value;
-            const statusFilter = document.getElementById('reviewStatusFilter').value;
-            const dateFilter = document.getElementById('reviewDateFilter').value;
-            
-            const rows = document.querySelectorAll('.review-table-row');
-            const now = Date.now();
-            
-            rows.forEach(row => {
-                const prodName = row.getAttribute('data-product-name');
-                const revName = row.getAttribute('data-reviewer-name');
-                const comment = row.getAttribute('data-comment');
-                const rating = row.getAttribute('data-rating');
-                const status = row.getAttribute('data-status');
-                const time = parseInt(row.getAttribute('data-time'));
-                
-                const matchesSearch = searchQuery === "" || 
-                                      prodName.includes(searchQuery) || 
-                                      revName.includes(searchQuery) || 
-                                      comment.includes(searchQuery);
-                                      
-                const matchesRating = ratingFilter === "ALL" || rating === ratingFilter;
-                const matchesStatus = statusFilter === "ALL" || status === statusFilter;
-                
-                let matchesDate = true;
-                if (dateFilter === "TODAY") {
-                    matchesDate = (now - time) <= 24 * 60 * 60 * 1000;
-                } else if (dateFilter === "7DAYS") {
-                    matchesDate = (now - time) <= 7 * 24 * 60 * 60 * 1000;
-                } else if (dateFilter === "30DAYS") {
-                    matchesDate = (now - time) <= 30 * 24 * 60 * 60 * 1000;
-                }
-                
-                if (matchesSearch && matchesRating && matchesStatus && matchesDate) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
-            });
-        }
-
         // Modal toggles
         function openAddModal() {
             document.getElementById('addModal').style.display = 'flex';
@@ -4970,30 +5003,108 @@
             sortCatalogRows(sortBy);
         }
 
-        function searchReviews() {
-            const input = document.getElementById('reviewSearch').value.toLowerCase();
-            const rows = document.querySelectorAll('.review-row');
-            rows.forEach(row => {
-                const customer = row.querySelector('.rev-customer').textContent.toLowerCase();
-                const comment = row.querySelector('.rev-comment').textContent.toLowerCase();
-                if (customer.includes(input) || comment.includes(input)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+        function openReviewDetailsModal(id, productName, productImg, reviewerName, rating, comment, dateStr, isHidden) {
+            document.getElementById('modalReviewIdHiddenToggle').value = id;
+            document.getElementById('modalReviewIdHiddenDelete').value = id;
+            document.getElementById('detailReviewProductName').textContent = productName;
+            document.getElementById('detailReviewProductImg').src = productImg;
+            document.getElementById('detailReviewerName').textContent = reviewerName;
+            document.getElementById('detailReviewDate').textContent = dateStr;
+            document.getElementById('detailReviewText').textContent = comment;
+            
+            // Stars
+            const starsContainer = document.getElementById('detailReviewRatingStars');
+            starsContainer.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const star = document.createElement('i');
+                star.className = i < rating ? 'fas fa-star' : 'far fa-star';
+                starsContainer.appendChild(star);
+            }
+            
+            // Status & Buttons
+            const badge = document.getElementById('detailReviewStatusBadge');
+            const approveBtn = document.getElementById('modalApproveBtn');
+            if (isHidden === 1) {
+                badge.className = 'status-badge status-cancelled';
+                badge.textContent = 'Hidden';
+                approveBtn.textContent = 'Approve';
+                approveBtn.className = 'btn-gold';
+                approveBtn.style.border = '';
+                approveBtn.style.color = '';
+            } else {
+                badge.className = 'status-badge status-completed';
+                badge.textContent = 'Approved';
+                approveBtn.textContent = 'Hide';
+                approveBtn.className = 'btn-outline';
+                approveBtn.style.borderColor = 'var(--gold)';
+                approveBtn.style.color = 'var(--gold)';
+                approveBtn.style.background = 'transparent';
+            }
+            
+            document.getElementById('reviewDetailsModal').style.display = 'flex';
         }
-        
+
+        function closeReviewDetailsModal() {
+            document.getElementById('reviewDetailsModal').style.display = 'none';
+        }
+
         function filterReviews() {
-            const filter = document.getElementById('reviewFilter').value;
+            const searchQuery = document.getElementById('reviewSearch').value.toLowerCase().trim();
+            const productFilter = document.getElementById('filterProduct').value;
+            const ratingFilter = document.getElementById('filterRating').value;
+            const dateFilter = document.getElementById('filterDate').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+
             const rows = document.querySelectorAll('.review-row');
+            const now = new Date().getTime();
+
             rows.forEach(row => {
+                const pId = row.getAttribute('data-product-id');
+                const pName = row.getAttribute('data-product-name');
+                const rName = row.getAttribute('data-reviewer-name');
+                const comment = row.getAttribute('data-comment');
+                const rating = row.getAttribute('data-rating');
+                const rowTime = parseInt(row.getAttribute('data-date-time'));
                 const isHidden = row.getAttribute('data-hidden') === '1';
-                if (filter === 'ALL') {
-                    row.style.display = '';
-                } else if (filter === 'VISIBLE' && !isHidden) {
-                    row.style.display = '';
-                } else if (filter === 'HIDDEN' && isHidden) {
+
+                let matchesSearch = true;
+                let matchesProduct = true;
+                let matchesRating = true;
+                let matchesDate = true;
+                let matchesStatus = true;
+
+                if (searchQuery) {
+                    matchesSearch = pName.includes(searchQuery) || rName.includes(searchQuery) || comment.includes(searchQuery);
+                }
+
+                if (productFilter !== 'ALL') {
+                    matchesProduct = (pId === productFilter);
+                }
+
+                if (ratingFilter !== 'ALL') {
+                    matchesRating = (rating === ratingFilter);
+                }
+
+                if (dateFilter !== 'ALL') {
+                    const diffDays = (now - rowTime) / (1000 * 60 * 60 * 24);
+                    if (dateFilter === 'TODAY') {
+                        matchesDate = (diffDays <= 1.0);
+                    } else if (dateFilter === 'LAST_7') {
+                        matchesDate = (diffDays <= 7.0);
+                    } else if (dateFilter === 'LAST_30') {
+                        matchesDate = (diffDays <= 30.0);
+                    }
+                }
+
+                if (statusFilter !== 'ALL') {
+                    if (statusFilter === 'APPROVED') {
+                        matchesStatus = !isHidden;
+                    } else if (statusFilter === 'HIDDEN') {
+                        matchesStatus = isHidden;
+                    }
+                }
+
+                if (matchesSearch && matchesProduct && matchesRating && matchesDate && matchesStatus) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -5006,6 +5117,9 @@
             <% if ("product-details".equalsIgnoreCase(activeTab) && prodId > 0) { %>
                 fetchGalleryImages(<%= prodId %>);
                 fetchVariantsList(<%= prodId %>, 0);
+            <% } %>
+            <% if ("reviews".equalsIgnoreCase(activeTab)) { %>
+                filterReviews();
             <% } %>
         });
 
