@@ -96,15 +96,22 @@ public class EmailUtility {
         }
 
         Properties smtpProps = new Properties();
-        smtpProps.put("mail.smtp.host", getProperty("mail.smtp.host", "smtp.gmail.com"));
-        smtpProps.put("mail.smtp.port", getProperty("mail.smtp.port", "587"));
-        smtpProps.put("mail.smtp.auth", getProperty("mail.smtp.auth", "true"));
-        smtpProps.put("mail.smtp.starttls.enable", getProperty("mail.smtp.starttls.enable", "true"));
-        smtpProps.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
+        // Load all mail.smtp properties from loaded properties file first
+        for (String name : PROPERTIES.stringPropertyNames()) {
+            if (name.startsWith("mail.smtp.")) {
+                smtpProps.put(name, getProperty(name, PROPERTIES.getProperty(name)));
+            }
+        }
+        // Apply default/override properties if not already set
+        smtpProps.putIfAbsent("mail.smtp.host", getProperty("mail.smtp.host", "smtp.gmail.com"));
+        smtpProps.putIfAbsent("mail.smtp.port", getProperty("mail.smtp.port", "587"));
+        smtpProps.putIfAbsent("mail.smtp.auth", getProperty("mail.smtp.auth", "true"));
+        smtpProps.putIfAbsent("mail.smtp.starttls.enable", getProperty("mail.smtp.starttls.enable", "true"));
+        smtpProps.putIfAbsent("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
 
-        final String username = getProperty("mail.smtp.username", "luxeglow");
+        final String username = getProperty("mail.smtp.username", "sidti0110@gmail.com");
         final String password = getProperty("mail.smtp.password", "uaxs xkzp xkrc mvyn");
-        final String from = getProperty("mail.from", "sidtiwari0110@gmail.com");
+        final String from = getProperty("mail.from", "sidti0110@gmail.com");
 
         if (username.isEmpty() || password.isEmpty() || from.isEmpty()) {
             throw new IllegalStateException("SMTP credentials (username, password, from address) are not configured.");
