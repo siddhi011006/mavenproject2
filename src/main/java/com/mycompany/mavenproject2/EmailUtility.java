@@ -132,7 +132,7 @@ public class EmailUtility {
         smtpProps.putIfAbsent("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
 
         final String username = getProperty("mail.smtp.username", "sidti0110@gmail.com");
-        final String rawPassword = getProperty("mail.smtp.password", "uaxsxkzpxkrcmvyn");
+        final String rawPassword = getProperty("mail.smtp.password", "aghmjawoltmlworh");
         final String password = rawPassword != null ? rawPassword.replace(" ", "") : "";
         final String from = getProperty("mail.from", "sidti0110@gmail.com");
 
