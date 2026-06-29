@@ -16,7 +16,7 @@
     String host = EmailUtility.getProperty("mail.smtp.host", "smtp.gmail.com");
     String port = EmailUtility.getProperty("mail.smtp.port", "587");
     String username = EmailUtility.getProperty("mail.smtp.username", "sidti0110@gmail.com");
-    String password = EmailUtility.getProperty("mail.smtp.password", "uaxs xkzp xkrc mvyn");
+    String password = EmailUtility.getProperty("mail.smtp.password", "uaxsxkzpxkrcmvyn");
     String fromAddress = EmailUtility.getProperty("mail.from", "sidti0110@gmail.com");
     String adminEmail = EmailUtility.getAdminEmail();
 

@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.sql.*" %>
 <%@ page import="com.mycompany.mavenproject2.DBConnection" %>
+<%@ page import="com.mycompany.mavenproject2.PasswordHasher" %>
 <%
     // Authenticate user
     HttpSession s = request.getSession(false);
@@ -96,11 +97,11 @@
                         rs = checkPs.executeQuery();
                         if (rs.next()) {
                             String currentPass = rs.getString("password");
-                            if (!currentPass.equals(oldPass)) {
+                            if (!PasswordHasher.checkPassword(oldPass, currentPass)) {
                                 error = "Incorrect current password.";
                             } else {
                                 updatePs = con.prepareStatement("UPDATE users SET password = ? WHERE id = ?");
-                                updatePs.setString(1, newPass);
+                                updatePs.setString(1, PasswordHasher.hashPassword(newPass));
                                 updatePs.setInt(2, userId);
                                 updatePs.executeUpdate();
                                 success = "Password changed successfully!";

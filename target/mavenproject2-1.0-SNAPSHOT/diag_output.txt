@@ -1,0 +1,81 @@
+LuxeGlow Diagnostics Log
+=======================
+1. Database Connection & Users
+Database connection successful!
+ID: 1 | Name: LuxeGlow Admin | Email: admin@luxeglow.com | Username: admin | Role: ADMIN | Enabled: 1
+ID: 2 | Name: Siddhi Tiwari | Email: siddhi@example.com | Username: siddhi | Role: USER | Enabled: 1
+ID: 3 | Name: Siddhi Tiwari | Email: sidti0110@gmail.com | Username: sidti0110 | Role: USER | Enabled: 1
+ID: 8 | Name: Test User | Email: testuser@example.com | Username: testuser | Role: USER | Enabled: 1
+ID: 9 | Name: Test SMTP User | Email: testsmtp@example.com | Username: testsmtp | Role: USER | Enabled: 1
+ID: 10 | Name: Siddhi Tiwari | Email: siddhitiwari110@gmail.com | Username: siddhitiwari110 | Role: USER | Enabled: 1
+
+2. Email Configuration Audit
+Is Email Configured? true
+SMTP Host (resolved): smtp.gmail.com
+SMTP Port (resolved): 587
+SMTP Username (resolved): sidti0110@gmail.com
+SMTP Password (resolved): uaxsxkzpxkrcmvyn
+SMTP From (resolved): sidti0110@gmail.com
+
+Environment Variables:
+SMTP_HOST: null
+SMTP_PORT: null
+SMTP_USER: null
+SMTP_PASS: null
+SMTP_FROM: null
+
+System Properties:
+mail.smtp.host: null
+mail.smtp.port: null
+mail.smtp.username: null
+mail.smtp.password: null
+mail.from: null
+
+3. Triggering test emails to sidti0110@gmail.com
+Sending simulated OTP email to sidti0110@gmail.com...
+Failed to send OTP email: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-30ec79d4746sm13972903eec.13 - gsmtp
+
+jakarta.mail.AuthenticationFailedException: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-30ec79d4746sm13972903eec.13 - gsmtp
+
+	at org.eclipse.angus.mail.smtp.SMTPTransport$Authenticator.authenticate(SMTPTransport.java:954)
+	at org.eclipse.angus.mail.smtp.SMTPTransport.authenticate(SMTPTransport.java:865)
+	at org.eclipse.angus.mail.smtp.SMTPTransport.protocolConnect(SMTPTransport.java:769)
+	at jakarta.mail.Service.connect(Service.java:367)
+	at jakarta.mail.Service.connect(Service.java:225)
+	at jakarta.mail.Service.connect(Service.java:174)
+	at jakarta.mail.Transport.send0(Transport.java:232)
+	at jakarta.mail.Transport.send(Transport.java:102)
+	at com.mycompany.mavenproject2.EmailUtility.sendEmailSync(EmailUtility.java:167)
+	at org.apache.jsp.test_002dsmtp_jsp._jspService(test_002dsmtp_jsp.java:195)
+	at org.apache.jasper.runtime.HttpJspBase.service(HttpJspBase.java:62)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.jasper.servlet.JspServletWrapper.service(JspServletWrapper.java:428)
+	at org.apache.jasper.servlet.JspServlet.serviceJspFile(JspServlet.java:350)
+	at org.apache.jasper.servlet.JspServlet.service(JspServlet.java:301)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.valves.AbstractAccessLogValve.invoke(AbstractAccessLogValve.java:782)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:1272)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1797)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1447)
+Sending simulated Order Confirmation email to sidti0110@gmail.com...
+Order confirmation email queued successfully!

@@ -37,6 +37,28 @@ public class EmailUtility {
      * Properties, then mail.properties file.
      */
     public static String getProperty(String key, String defaultValue) {
+        // Explicit mappings for exact environment variables requested by user
+        if ("mail.smtp.host".equals(key)) {
+            String val = System.getenv("SMTP_HOST");
+            if (val != null && !val.trim().isEmpty()) return val.trim();
+        }
+        if ("mail.smtp.port".equals(key)) {
+            String val = System.getenv("SMTP_PORT");
+            if (val != null && !val.trim().isEmpty()) return val.trim();
+        }
+        if ("mail.smtp.username".equals(key)) {
+            String val = System.getenv("SMTP_USER");
+            if (val != null && !val.trim().isEmpty()) return val.trim();
+        }
+        if ("mail.smtp.password".equals(key)) {
+            String val = System.getenv("SMTP_PASS");
+            if (val != null && !val.trim().isEmpty()) return val.trim();
+        }
+        if ("mail.from".equals(key)) {
+            String val = System.getenv("SMTP_FROM");
+            if (val != null && !val.trim().isEmpty()) return val.trim();
+        }
+
         String envKey = key.toUpperCase().replace('.', '_');
         if (envKey.equals("MAIL_SMTP_STARTTLS_ENABLE")) {
             envKey = "SMTP_STARTTLS";
@@ -110,7 +132,8 @@ public class EmailUtility {
         smtpProps.putIfAbsent("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
 
         final String username = getProperty("mail.smtp.username", "sidti0110@gmail.com");
-        final String password = getProperty("mail.smtp.password", "uaxs xkzp xkrc mvyn");
+        final String rawPassword = getProperty("mail.smtp.password", "uaxsxkzpxkrcmvyn");
+        final String password = rawPassword != null ? rawPassword.replace(" ", "") : "";
         final String from = getProperty("mail.from", "sidti0110@gmail.com");
 
         if (username.isEmpty() || password.isEmpty() || from.isEmpty()) {
@@ -124,13 +147,36 @@ public class EmailUtility {
             }
         });
 
+        // Detailed logging before SMTP sending
+        System.out.println("[SMTP DIAGNOSTIC PRE-SEND LOG]");
+        System.out.println(" - SMTP Host: " + smtpProps.getProperty("mail.smtp.host"));
+        System.out.println(" - SMTP Port: " + smtpProps.getProperty("mail.smtp.port"));
+        System.out.println(" - SMTP Auth (mail.smtp.auth): " + smtpProps.getProperty("mail.smtp.auth"));
+        System.out.println(" - STARTTLS Enabled (mail.smtp.starttls.enable): " + smtpProps.getProperty("mail.smtp.starttls.enable"));
+        System.out.println(" - SMTP Username: " + username);
+        System.out.println(" - SMTP Password Length: " + (password != null ? password.length() : 0));
+        System.out.println(" - From Address: " + from);
+
         Message message = new MimeMessage(session);
         message.setFrom(new InternetAddress(from));
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail.trim()));
         message.setSubject(subject);
         message.setContent(bodyHtml, "text/html; charset=utf-8");
 
-        Transport.send(message);
+        try {
+            Transport.send(message);
+        } catch (jakarta.mail.MessagingException mex) {
+            System.err.println("[SMTP MESSAGING EXCEPTION]");
+            System.err.println("Exception message: " + mex.getMessage());
+            mex.printStackTrace();
+            
+            Exception nextEx = mex.getNextException();
+            if (nextEx != null) {
+                System.err.println("[SMTP NESTED EXCEPTION ROOT CAUSE]");
+                nextEx.printStackTrace();
+            }
+            throw mex;
+        }
     }
 
     /**

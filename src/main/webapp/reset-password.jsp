@@ -2,6 +2,7 @@
 <%@ page import="java.sql.*" %>
 <%@ page import="com.mycompany.mavenproject2.DBConnection" %>
 <%@ page import="com.mycompany.mavenproject2.EmailUtility" %>
+<%@ page import="com.mycompany.mavenproject2.PasswordHasher" %>
 <%@ page import="java.util.UUID" %>
 <%
     String error = null;
@@ -124,7 +125,7 @@
 
                                 // 2. Update user's password in users table
                                 updatePs = con.prepareStatement("UPDATE users SET password = ? WHERE email = ?");
-                                updatePs.setString(1, password);
+                                updatePs.setString(1, PasswordHasher.hashPassword(password));
                                 updatePs.setString(2, email);
                                 updatePs.executeUpdate();
 

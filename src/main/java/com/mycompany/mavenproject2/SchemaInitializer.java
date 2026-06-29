@@ -14,6 +14,22 @@ public class SchemaInitializer {
             return;
         }
 
+        // Validate SMTP Configuration on startup
+        try {
+            if (!EmailUtility.isConfigured()) {
+                System.err.println("[WARNING] SMTP settings are NOT fully configured! Email notifications and OTPs will fail. "
+                        + "Please configure environment variables: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM.");
+            } else {
+                System.out.println("[INFO] SMTP configuration validated successfully: "
+                        + "Host=" + EmailUtility.getProperty("mail.smtp.host", "")
+                        + ", Port=" + EmailUtility.getProperty("mail.smtp.port", "")
+                        + ", User=" + EmailUtility.getProperty("mail.smtp.username", "")
+                        + ", From=" + EmailUtility.getProperty("mail.from", ""));
+            }
+        } catch (Exception ex) {
+            System.err.println("[ERROR] Failed to validate SMTP configuration on startup: " + ex.getMessage());
+        }
+
         try {
             // 1. Update products table columns
             ensureColumn(con, "products", "brand", "VARCHAR(100) DEFAULT 'LuxeGlow'");
@@ -290,6 +306,37 @@ public class SchemaInitializer {
                     st.executeUpdate(sql);
                 }
             }
+
+            // 13. Create email_otps table
+            if (!tableExists(con, "email_otps")) {
+                try (Statement st = con.createStatement()) {
+                    String sql = "CREATE TABLE email_otps ("
+                               + "id INT AUTO_INCREMENT PRIMARY KEY, "
+                               + "email VARCHAR(150) NOT NULL, "
+                               + "otp_hash VARCHAR(255) NOT NULL, "
+                               + "expiry_time TIMESTAMP NOT NULL, "
+                               + "is_used TINYINT(1) DEFAULT 0, "
+                               + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                               + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                    st.executeUpdate(sql);
+                }
+            }
+
+            // 14. Create otp_requests table
+            if (!tableExists(con, "otp_requests")) {
+                try (Statement st = con.createStatement()) {
+                    String sql = "CREATE TABLE otp_requests ("
+                               + "id INT AUTO_INCREMENT PRIMARY KEY, "
+                               + "email VARCHAR(150) NOT NULL, "
+                               + "ip_address VARCHAR(45) NOT NULL, "
+                               + "request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                               + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                    st.executeUpdate(sql);
+                }
+            }
+
+            // 15. Alter users table to add email_verified column
+            ensureColumn(con, "users", "email_verified", "TINYINT(1) DEFAULT 0");
 
             // Seed default cms contents
             seedCMSContent(con, "about_hero_title", "About LuxeGlow");

@@ -58,7 +58,7 @@
             <% } %>
 
             <!-- Form submits to Login servlet -->
-            <form action="Login" method="POST">
+            <form action="register" method="POST">
                 
                 <div class="form-group">
                     <label for="fullname">Full Name</label>
@@ -67,7 +67,22 @@
 
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="name@example.com" value="<%= emailVal.replace("\"", "&quot;") %>" pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" title="Please enter a valid email address." required>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="email" id="email" name="email" placeholder="name@example.com" value="<%= emailVal.replace("\"", "&quot;") %>" pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" title="Please enter a valid email address." required style="flex: 1; margin-bottom: 0;">
+                        <button type="button" id="send-otp-btn" class="btn-gold" style="width: auto; padding: 12px 20px; font-size: 0.85rem; border-radius: 30px; margin-top: 0; white-space: nowrap;">Send OTP</button>
+                        <span id="email-verified-badge" style="display: none; color: var(--success); font-weight: bold; font-size: 0.9rem; align-items: center; gap: 6px; white-space: nowrap;">
+                            <i class="fas fa-check-circle"></i> Verified
+                        </span>
+                    </div>
+                    <span id="otp-timer-msg" style="display: block; font-size: 0.8rem; margin-top: 6px; color: var(--gold);"></span>
+                </div>
+
+                <div class="form-group" id="otp-group" style="display: none;">
+                    <label for="otp">Enter Verification OTP</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="otp" placeholder="Enter 6-digit code" pattern="\d{6}" maxlength="6" style="flex: 1; border-radius: 30px; padding: 12px 18px; border: 1px solid var(--border-color); outline:none; text-align: center; letter-spacing: 3px; font-weight: bold; margin-bottom: 0; background: var(--bg-card); color: var(--text-primary);">
+                        <button type="button" id="verify-otp-btn" class="btn-gold" style="width: auto; padding: 12px 20px; font-size: 0.85rem; border-radius: 30px; margin-top: 0; white-space: nowrap;">Verify OTP</button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -198,6 +213,171 @@
     <script>
         // Toggle password visibility
         document.addEventListener('DOMContentLoaded', () => {
+            const sendOtpBtn = document.getElementById('send-otp-btn');
+            const verifyOtpBtn = document.getElementById('verify-otp-btn');
+            const emailInput = document.getElementById('email');
+            const otpInput = document.getElementById('otp');
+            const otpGroup = document.getElementById('otp-group');
+            const otpTimerMsg = document.getElementById('otp-timer-msg');
+            const verifiedBadge = document.getElementById('email-verified-badge');
+            const registerBtn = document.querySelector('button[type="submit"]');
+
+            let timer = null;
+            let cooldown = 0;
+            let isVerified = false;
+
+            function updateFormState() {
+                if (isVerified) {
+                    registerBtn.disabled = false;
+                    registerBtn.style.opacity = '1';
+                    registerBtn.style.cursor = 'pointer';
+                    verifiedBadge.style.display = 'inline-flex';
+                    sendOtpBtn.style.display = 'none';
+                    otpGroup.style.display = 'none';
+                } else {
+                    registerBtn.disabled = true;
+                    registerBtn.style.opacity = '0.5';
+                    registerBtn.style.cursor = 'not-allowed';
+                    verifiedBadge.style.display = 'none';
+                    sendOtpBtn.style.display = 'inline-block';
+                }
+            }
+
+            // Initially call to setup form button state (requires email verification)
+            updateFormState();
+
+            // When user edits the email, reset email verification status
+            emailInput.addEventListener('input', () => {
+                if (isVerified) {
+                    isVerified = false;
+                    updateFormState();
+                }
+            });
+
+            function validateEmailFormat(email) {
+                const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                return re.test(email);
+            }
+
+            function startCooldownTimer(seconds) {
+                // If an invalid cooldown value is detected (e.g., negative, NaN, or over 60s), reset to 60 seconds.
+                let parsedSeconds = parseInt(seconds, 10);
+                if (isNaN(parsedSeconds) || parsedSeconds <= 0 || parsedSeconds > 60) {
+                    console.warn("[OTP TIMER WARNING] Invalid cooldown value detected: " + seconds + ". Resetting to 60 seconds.");
+                    parsedSeconds = 60;
+                }
+
+                cooldown = parsedSeconds;
+                sendOtpBtn.disabled = true;
+                sendOtpBtn.style.opacity = '0.5';
+                sendOtpBtn.style.cursor = 'not-allowed';
+                
+                if (timer) clearInterval(timer);
+                timer = setInterval(() => {
+                    cooldown--;
+                    if (cooldown <= 0) {
+                        clearInterval(timer);
+                        sendOtpBtn.disabled = false;
+                        sendOtpBtn.style.opacity = '1';
+                        sendOtpBtn.style.cursor = 'pointer';
+                        sendOtpBtn.innerText = 'Resend OTP';
+                        otpTimerMsg.innerText = '';
+                    } else {
+                        sendOtpBtn.innerText = `Resend in ${cooldown}s`;
+                        otpTimerMsg.innerText = `You can request a new passcode in ${cooldown} seconds.`;
+                    }
+                }, 1000);
+            }
+
+            sendOtpBtn.addEventListener('click', async () => {
+                const emailVal = emailInput.value.trim();
+                if (!emailVal) {
+                    alert('Please enter your email address first.');
+                    emailInput.focus();
+                    return;
+                }
+                if (!validateEmailFormat(emailVal)) {
+                    alert('Please enter a valid email address.');
+                    emailInput.focus();
+                    return;
+                }
+
+                // Show the OTP input field IMMEDIATELY after clicking Send OTP
+                otpGroup.style.display = 'block';
+                otpInput.focus();
+
+                sendOtpBtn.innerText = 'Sending...';
+                sendOtpBtn.disabled = true;
+
+                try {
+                    const response = await fetch('send-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ email: emailVal })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(data.message);
+                        startCooldownTimer(60);
+                    } else {
+                        alert(data.message);
+                        sendOtpBtn.innerText = 'Send OTP';
+                        sendOtpBtn.disabled = false;
+
+                        // Check if backend message contains a cooldown time (in case of consecutive clicks)
+                        const waitMatch = data.message.match(/please wait (\d+) seconds/i);
+                        if (waitMatch) {
+                            const waitSecs = parseInt(waitMatch[1], 10);
+                            startCooldownTimer(waitSecs);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error sending OTP:', error);
+                    alert('An error occurred while sending OTP. Please try again.');
+                    sendOtpBtn.innerText = 'Send OTP';
+                    sendOtpBtn.disabled = false;
+                }
+            });
+
+            verifyOtpBtn.addEventListener('click', async () => {
+                const emailVal = emailInput.value.trim();
+                const otpVal = otpInput.value.trim();
+
+                if (!otpVal || otpVal.length !== 6) {
+                    alert('Please enter the 6-digit OTP code.');
+                    otpInput.focus();
+                    return;
+                }
+
+                verifyOtpBtn.innerText = 'Verifying...';
+                verifyOtpBtn.disabled = true;
+
+                try {
+                    const response = await fetch('verify-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ email: emailVal, otp: otpVal })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(data.message);
+                        isVerified = true;
+                        updateFormState();
+                    } else {
+                        alert(data.message);
+                        verifyOtpBtn.innerText = 'Verify OTP';
+                        verifyOtpBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Error verifying OTP:', error);
+                    alert('An error occurred during verification. Please try again.');
+                    verifyOtpBtn.innerText = 'Verify OTP';
+                    verifyOtpBtn.disabled = false;
+                }
+            });
+
             const togglePassword = document.getElementById('togglePassword');
             const passwordInput = document.getElementById('password');
             if (togglePassword && passwordInput) {

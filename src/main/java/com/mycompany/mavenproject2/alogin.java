@@ -31,14 +31,13 @@ public class alogin extends HttpServlet {
             Connection con = DBConnection.getConnection();
 
             // SQL Query to verify credentials and select user metadata
-            String sql = "SELECT id, fullname, email, username, role, country_name, enabled FROM users WHERE email=? AND password=?";
+            String sql = "SELECT id, fullname, email, username, role, country_name, enabled, password FROM users WHERE email=?";
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setString(1, email.trim());
-            ps.setString(2, password.trim());
 
             ResultSet rs = ps.executeQuery();
 
-            if (rs.next()) {
+            if (rs.next() && PasswordHasher.checkPassword(password.trim(), rs.getString("password"))) {
                 int enabled = rs.getInt("enabled");
                 if (enabled == 0) {
                     rs.close();

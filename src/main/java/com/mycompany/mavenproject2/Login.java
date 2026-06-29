@@ -9,8 +9,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
-@WebServlet("/Login")
+@WebServlet({"/Login", "/register"})
 public class Login extends HttpServlet {
 
     @Override
@@ -100,13 +101,27 @@ public class Login extends HttpServlet {
             return;
         }
 
+        // Enforce Backend OTP verification validation
+        HttpSession session = request.getSession();
+        String verifiedEmail = (String) session.getAttribute("verified_email");
+        if (verifiedEmail == null || !verifiedEmail.equalsIgnoreCase(email.trim())) {
+            request.setAttribute("error", "Email verification is required. Please verify your email before registering.");
+            request.setAttribute("fullname", fullname);
+            request.setAttribute("email", email);
+            request.setAttribute("phone", phone);
+            request.setAttribute("countryCode", countryCode);
+            request.setAttribute("country", country);
+            request.getRequestDispatcher("register.jsp").forward(request, response);
+            return;
+        }
+
         try {
             Connection con = DBConnection.getConnection();
 
             // Check if email already exists
             String checkSql = "SELECT id FROM users WHERE email = ?";
             PreparedStatement checkPs = con.prepareStatement(checkSql);
-            checkPs.setString(1, email);
+            checkPs.setString(1, email.trim());
             ResultSet checkRs = checkPs.executeQuery();
             if (checkRs.next()) {
                 request.setAttribute("error", "An account with this email already exists.");
@@ -125,17 +140,23 @@ public class Login extends HttpServlet {
             // Concatenate phone number correctly
             String fullPhone = countryCode.trim() + phone.trim();
 
+            // Hash the password securely using PBKDF2
+            String hashedPassword = PasswordHasher.hashPassword(password);
+
             // Insert new user
-            String sql = "INSERT INTO users(fullname, email, password, username, role, phone, country_name) VALUES(?, ?, ?, ?, 'USER', ?, ?)";
+            String sql = "INSERT INTO users(fullname, email, password, username, role, phone, country_name, email_verified) VALUES(?, ?, ?, ?, 'USER', ?, ?, 1)";
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setString(1, fullname);
-            ps.setString(2, email);
-            ps.setString(3, password);
+            ps.setString(2, email.trim().toLowerCase());
+            ps.setString(3, hashedPassword);
             ps.setString(4, username);
             ps.setString(5, fullPhone);
             ps.setString(6, country);
 
             ps.executeUpdate();
+            
+            // Clean up session token
+            session.removeAttribute("verified_email");
             con.close();
 
             // Trigger welcome email asynchronously (fails gracefully)
