@@ -28,7 +28,8 @@ public class EmailUtility {
                 LOGGER.info("Successfully loaded mail.properties config.");
             }
         } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Failed to load mail.properties file", ex);
+            String errorMessage = ex.getMessage() != null ? ex.getMessage() : "Unknown error";
+            LOGGER.log(Level.SEVERE, "Failed to load mail.properties file: " + errorMessage, ex);
         }
     }
 
@@ -147,15 +148,11 @@ public class EmailUtility {
             }
         });
 
-        // Detailed logging before SMTP sending
-        System.out.println("[SMTP DIAGNOSTIC PRE-SEND LOG]");
-        System.out.println(" - SMTP Host: " + smtpProps.getProperty("mail.smtp.host"));
-        System.out.println(" - SMTP Port: " + smtpProps.getProperty("mail.smtp.port"));
-        System.out.println(" - SMTP Auth (mail.smtp.auth): " + smtpProps.getProperty("mail.smtp.auth"));
-        System.out.println(" - STARTTLS Enabled (mail.smtp.starttls.enable): " + smtpProps.getProperty("mail.smtp.starttls.enable"));
-        System.out.println(" - SMTP Username: " + username);
-        System.out.println(" - SMTP Password Length: " + (password != null ? password.length() : 0));
-        System.out.println(" - From Address: " + from);
+        // Detailed logging before SMTP connection (Requirement 1)
+        System.out.println("[SMTP DIAGNOSTIC] Attempting connection to SMTP host...");
+        System.out.println(" - Host: " + smtpProps.getProperty("mail.smtp.host"));
+        System.out.println(" - Port: " + smtpProps.getProperty("mail.smtp.port"));
+        System.out.println(" - User: " + username);
 
         Message message = new MimeMessage(session);
         message.setFrom(new InternetAddress(from));
@@ -163,11 +160,27 @@ public class EmailUtility {
         message.setSubject(subject);
         message.setContent(bodyHtml, "text/html; charset=utf-8");
 
+        Transport transport = null;
         try {
-            Transport.send(message);
+            transport = session.getTransport("smtp");
+            transport.connect(smtpProps.getProperty("mail.smtp.host"), Integer.parseInt(smtpProps.getProperty("mail.smtp.port")), username, password);
+
+            // Detailed logging after SMTP authentication (Requirement 2)
+            System.out.println("[SMTP DIAGNOSTIC] Successfully connected and authenticated SMTP user: " + username);
+
+            // Detailed logging before sending the message (Requirement 3)
+            System.out.println("[SMTP DIAGNOSTIC] Preparing to send MimeMessage to: " + toEmail);
+
+            message.saveChanges();
+            transport.sendMessage(message, message.getAllRecipients());
+
+            // Detailed logging after successful send (Requirement 4)
+            System.out.println("[SMTP DIAGNOSTIC] Message sent successfully to: " + toEmail);
+
         } catch (jakarta.mail.MessagingException mex) {
-            System.err.println("[SMTP MESSAGING EXCEPTION]");
-            System.err.println("Exception message: " + mex.getMessage());
+            // Requirement 5
+            String errorMessage = mex.getMessage() != null ? mex.getMessage() : "Unknown messaging error";
+            System.err.println("[SMTP MESSAGING EXCEPTION] " + errorMessage);
             mex.printStackTrace();
             
             Exception nextEx = mex.getNextException();
@@ -176,6 +189,22 @@ public class EmailUtility {
                 nextEx.printStackTrace();
             }
             throw mex;
+        } catch (Exception e) {
+            // Requirement 5
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown general error";
+            System.err.println("[SMTP GENERAL EXCEPTION] " + errorMessage);
+            e.printStackTrace();
+            throw e;
+        } finally {
+            if (transport != null) {
+                try {
+                    transport.close();
+                } catch (Exception e) {
+                    // Requirement 5
+                    String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown close error";
+                    System.err.println("[SMTP CLOSE EXCEPTION] " + errorMessage);
+                }
+            }
         }
     }
 
@@ -194,7 +223,9 @@ public class EmailUtility {
                 LOGGER.log(Level.INFO, "Email sent successfully to {0} with subject: {1}",
                         new Object[] { toEmail, subject });
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Failed to send email to " + toEmail + " with subject: " + subject, e);
+                // Requirement 5
+                String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown async error";
+                LOGGER.log(Level.SEVERE, "Failed to send email to " + toEmail + " with subject: " + subject + ". Error: " + errorMessage, e);
             }
         });
     }
