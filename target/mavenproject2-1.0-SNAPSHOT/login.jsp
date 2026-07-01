@@ -90,12 +90,12 @@
                     <div style="position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: var(--border-light); z-index: 0;"></div>
                 </div>
 
-                <!-- Mock OAuth links -->
+                <!-- OAuth links -->
                 <div style="display:flex; gap:12px;">
-                    <button type="button" class="btn-outline" style="flex:1; font-size:0.8rem; border-radius:12px; padding:10px;" onclick="showToast('Google login is a demo feature.', 'warning')">
+                    <button type="button" class="btn-outline" style="flex:1; font-size:0.8rem; border-radius:12px; padding:10px;" onclick="loginWithGoogle()">
                         <i class="fab fa-google" style="margin-right:8px;"></i> Google
                     </button>
-                    <button type="button" class="btn-outline" style="flex:1; font-size:0.8rem; border-radius:12px; padding:10px;" onclick="showToast('Apple ID is a demo feature.', 'warning')">
+                    <button type="button" class="btn-outline" style="flex:1; font-size:0.8rem; border-radius:12px; padding:10px;" onclick="loginWithApple()">
                         <i class="fab fa-apple" style="margin-right:8px;"></i> Apple
                     </button>
                 </div>
@@ -112,7 +112,97 @@
 
     <!-- Dynamic Toast Notification Hook -->
     <div id="toast-container" style="position: fixed; bottom: 25px; right: 25px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+    <!-- Firebase compatibility SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4XOZm7ode2xC00Bys0tQDlyrYvVnZdyo",
+            authDomain: "luxeglow-ddcae.firebaseapp.com",
+            projectId: "luxeglow-ddcae",
+            storageBucket: "luxeglow-ddcae.firebasestorage.app",
+            messagingSenderId: "998913043711",
+            appId: "1:998913043711:web:f5415a70170bdd0c0630ca",
+            measurementId: "G-QH32PZP6TS"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        function loginWithGoogle() {
+            showToast("Opening Google Sign-In...", "info");
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    showToast("Google Authentication successful! Logging in...", "success");
+                    sendAuthToBackend(user, "google");
+                })
+                .catch((error) => {
+                    console.error(error);
+                    showToast("Google Sign-In failed: " + error.message, "danger");
+                });
+        }
+
+        function loginWithApple() {
+            showToast("Opening Apple Sign-In...", "info");
+            const provider = new firebase.auth.OAuthProvider('apple.com');
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    showToast("Apple Authentication successful! Logging in...", "success");
+                    sendAuthToBackend(user, "apple");
+                })
+                .catch((error) => {
+                    console.error(error);
+                    showToast("Apple Sign-In failed: " + error.message, "danger");
+                });
+        }
+
+        function sendAuthToBackend(user, provider) {
+            // Create a form programmatically to submit the OAuth payload to our backend servlet
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'oauth-login';
+
+            const emailInput = document.createElement('input');
+            emailInput.type = 'hidden';
+            emailInput.name = 'email';
+            emailInput.value = user.email || '';
+            form.appendChild(emailInput);
+
+            const nameInput = document.createElement('input');
+            nameInput.type = 'hidden';
+            nameInput.name = 'fullname';
+            nameInput.value = user.displayName || '';
+            form.appendChild(nameInput);
+
+            const uidInput = document.createElement('input');
+            uidInput.type = 'hidden';
+            uidInput.name = 'uid';
+            uidInput.value = user.uid || '';
+            form.appendChild(uidInput);
+
+            const providerInput = document.createElement('input');
+            providerInput.type = 'hidden';
+            providerInput.name = 'provider';
+            providerInput.value = provider;
+            form.appendChild(providerInput);
+
+            <% if (redirectVal != null && !redirectVal.trim().isEmpty()) { %>
+            const redirectInput = document.createElement('input');
+            redirectInput.type = 'hidden';
+            redirectInput.name = 'redirect';
+            redirectInput.value = '<%= redirectVal %>';
+            form.appendChild(redirectInput);
+            <% } %>
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -121,6 +211,7 @@
             let iconColor = 'var(--gold)';
             if (type === 'danger') { icon = 'fa-exclamation-circle'; iconColor = '#f56c6c'; }
             else if (type === 'warning') { icon = 'fa-exclamation-triangle'; iconColor = '#e6a23c'; }
+            else if (type === 'info') { icon = 'fa-info-circle'; iconColor = '#409eff'; }
             toast.innerHTML = `<i class="fas ${icon}" style="color: ${iconColor}; font-size: 1.1rem;"></i><span>${message}</span>`;
             container.appendChild(toast);
             setTimeout(() => { toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; }, 50);

@@ -20,6 +20,7 @@ com\mycompany\mavenproject2\PasswordHasher.class
 com\mycompany\mavenproject2\WishlistServlet.class
 com\mycompany\mavenproject2\AdminLogoutServlet.class
 com\mycompany\mavenproject2\Login.class
+com\mycompany\mavenproject2\OAuthLoginServlet.class
 com\mycompany\mavenproject2\CheckoutServlet$CartItemTemp.class
 com\mycompany\mavenproject2\VerifyOtpServlet.class
 com\mycompany\mavenproject2\SendOtpServlet.class
